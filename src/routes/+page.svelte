@@ -73,7 +73,6 @@ h1 {
 
 #dropper {
   border: 2px dashed #000;
-  /* 端から20pxの隙間を設けつつ横幅, 縦幅一杯に利用する */
   width: 95%;
   height: 200px;
   padding: 20px;

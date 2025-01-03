@@ -1,6 +1,30 @@
-#[tauri::command]
-fn drop(paths: Vec<String>) -> Vec<String> {
-    extract_image_files(paths)
+use tauri::Manager;
+
+const VIEWER_LABEL: &str = "viewer";
+const VIEWER_PAGE: &str = "viewer";
+
+// NOTE: Windows でのマルチウィンドウの問題対処のためasync関数として定義
+// https://qiita.com/kemoshumai/items/f0bfff31684a157ab9f3
+// 上記記事は2.0Beta版だが正式版にもKnown Issueとして記載されている
+// https://docs.rs/tauri/2.2.0/tauri/webview/struct.WebviewWindowBuilder.html
+#[tauri::command(async)]
+async fn drop(handle: tauri::AppHandle, paths: Vec<String>) -> Result<Vec<String>, String> {
+    let image_files = extract_image_files(paths);
+
+    let webview = handle.get_webview_window(VIEWER_LABEL);
+    if webview.is_none() {
+        let webview = tauri::WebviewWindowBuilder::new(
+            &handle,
+            VIEWER_LABEL,
+            tauri::WebviewUrl::App(VIEWER_PAGE.to_string().into()),
+        )
+        .build()
+        .expect("failed to build webview");
+
+        webview.show().expect("failed to show webview");
+    }
+
+    Ok(image_files)
 }
 
 // パス文字列の配列を受け取って拡張子名から画像ファイルを抽出して返す関数
@@ -36,7 +60,6 @@ fn extract_image_files(paths: Vec<String>) -> Vec<String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
         .invoke_handler(tauri::generate_handler![drop])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
