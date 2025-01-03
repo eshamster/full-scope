@@ -1,4 +1,4 @@
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 const VIEWER_LABEL: &str = "viewer";
 const VIEWER_PAGE: &str = "viewer";
@@ -8,13 +8,11 @@ const VIEWER_PAGE: &str = "viewer";
 // 上記記事は2.0Beta版だが正式版にもKnown Issueとして記載されている
 // https://docs.rs/tauri/2.2.0/tauri/webview/struct.WebviewWindowBuilder.html
 #[tauri::command(async)]
-async fn drop(handle: tauri::AppHandle, paths: Vec<String>) -> Result<Vec<String>, String> {
-    let image_files = extract_image_files(paths);
-
-    let webview = handle.get_webview_window(VIEWER_LABEL);
+async fn drop(app: tauri::AppHandle, paths: Vec<String>) -> Result<Vec<String>, String> {
+    let webview = app.get_webview_window(VIEWER_LABEL);
     if webview.is_none() {
         let webview = tauri::WebviewWindowBuilder::new(
-            &handle,
+            &app,
             VIEWER_LABEL,
             tauri::WebviewUrl::App(VIEWER_PAGE.to_string().into()),
         )
@@ -22,7 +20,14 @@ async fn drop(handle: tauri::AppHandle, paths: Vec<String>) -> Result<Vec<String
         .expect("failed to build webview");
 
         webview.show().expect("failed to show webview");
+        // TODO: 直近の結果を取得するcommandを用意してWebView側から呼ぶようにする
+        // (listenが間に合わないので仮でいったん待っている)
+        std::thread::sleep(std::time::Duration::from_millis(1000));
     }
+
+    let image_files = extract_image_files(paths);
+    app.emit("new-images", Some(image_files.clone()))
+        .expect("failed to emit new-images event");
 
     Ok(image_files)
 }
