@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
+  import { invoke, convertFileSrc } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
   import { onMount, onDestroy } from "svelte";
   import { ImageInfo } from "./image-info";
@@ -43,6 +43,7 @@
 <main class="container">
   <h1>Viewer Test</h1>
   {#each manager.getList() as imageInfo}
-    <div>{imageInfo.path}</div>
+    <div>{convertFileSrc(imageInfo.path)}</div>
+    <img src={convertFileSrc(imageInfo.path)} alt={imageInfo.path} />
   {/each}
 </main>
