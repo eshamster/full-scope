@@ -3,12 +3,9 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount, onDestroy } from "svelte";
 
-  let paths = $state([]);
-
   async function handleDrop(event: DragDropEvent) {
     const inputPaths = event.payload.paths;
-    paths = await invoke("drop", { paths: inputPaths });
-    console.log(paths);
+    await invoke("drop", { paths: inputPaths });
   }
 
   let unlisten;
@@ -35,10 +32,6 @@
 
   <!-- ファイルのドラッグ・ドロップを受け入れるdivフィールド -->
   <div id="dropper"></div>
-
-  {#each paths as path}
-    <div>{path}</div>
-  {/each}
 </main>
 
 <style>

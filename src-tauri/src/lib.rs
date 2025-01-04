@@ -1,14 +1,26 @@
+use std::sync::{Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 
 const VIEWER_LABEL: &str = "viewer";
 const VIEWER_PAGE: &str = "viewer";
+
+// idとpathsを持つcommandのレスポンス用のstruct
+#[derive(Clone, serde::Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct ImagePaths {
+    id: i32,
+    paths: Vec<String>,
+}
+
+// 直近返したIDと画像ファイルのパスを保持する
+static IMAGE_PATHS_MUTEX: OnceLock<Mutex<ImagePaths>> = OnceLock::new();
 
 // NOTE: Windows でのマルチウィンドウの問題対処のためasync関数として定義
 // https://qiita.com/kemoshumai/items/f0bfff31684a157ab9f3
 // 上記記事は2.0Beta版だが正式版にもKnown Issueとして記載されている
 // https://docs.rs/tauri/2.2.0/tauri/webview/struct.WebviewWindowBuilder.html
 #[tauri::command(async)]
-async fn drop(app: tauri::AppHandle, paths: Vec<String>) -> Result<Vec<String>, String> {
+async fn drop(app: tauri::AppHandle, paths: Vec<String>) -> Result<(), String> {
     let webview = app.get_webview_window(VIEWER_LABEL);
     if webview.is_none() {
         let webview = tauri::WebviewWindowBuilder::new(
@@ -20,16 +32,22 @@ async fn drop(app: tauri::AppHandle, paths: Vec<String>) -> Result<Vec<String>, 
         .expect("failed to build webview");
 
         webview.show().expect("failed to show webview");
-        // TODO: 直近の結果を取得するcommandを用意してWebView側から呼ぶようにする
-        // (listenが間に合わないので仮でいったん待っている)
-        std::thread::sleep(std::time::Duration::from_millis(1000));
     }
 
     let image_files = extract_image_files(paths);
-    app.emit("new-images", Some(image_files.clone()))
-        .expect("failed to emit new-images event");
 
-    Ok(image_files)
+    // Mutexでロックを取りつつIMAGE_PATHSを更新
+    let mut image_paths = IMAGE_PATHS_MUTEX
+        .get()
+        .expect("failed to get IMAGE_PATHS_MUTEX")
+        .lock()
+        .expect("failed to lock IMAGE_PATHS_MUTEX");
+    image_paths.id += 1;
+    image_paths.paths = image_files.clone();
+
+    app.emit("new-images", Some(image_paths.clone()))
+        .expect("failed to emit new-images event");
+    Ok(())
 }
 
 // パス文字列の配列を受け取って拡張子名から画像ファイルを抽出して返す関数
@@ -61,11 +79,31 @@ fn extract_image_files(paths: Vec<String>) -> Vec<String> {
     image_files
 }
 
+// 直近返したImagePaths を再び返すTauriコマンド
+// NOTE: drop時に新規ウィンドウ作成+emitではlistenが間に合わない場合があるので
+// 新規ウィンドウ側から再取得するために利用する
+#[tauri::command]
+fn get_prev_image_paths() -> ImagePaths {
+    IMAGE_PATHS_MUTEX
+        .get()
+        .expect("failed to get IMAGE_PATHS_MUTEX")
+        .lock()
+        .expect("failed to lock IMAGE_PATHS_MUTEX")
+        .clone()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    IMAGE_PATHS_MUTEX
+        .set(Mutex::new(ImagePaths {
+            id: 0,
+            paths: Vec::new(),
+        }))
+        .expect("failed to set IMAGE_PATHS_MUTEX");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![drop])
+        .invoke_handler(tauri::generate_handler![drop, get_prev_image_paths])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

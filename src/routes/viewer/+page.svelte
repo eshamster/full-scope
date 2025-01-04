@@ -1,15 +1,36 @@
 <script lang="ts">
+  import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
-  import { onDestroy } from "svelte";
+  import { onMount, onDestroy } from "svelte";
+  import { ImageInfo } from "./image-info";
+  import { ImageInfoManager } from "./image-info-manager.svelte";
 
-  let paths = $state<string[]>([]);
+  type ImagePathsResp = {
+    id: number;
+    paths: string[];
+  };
 
-  const unlisten = listen<string[]>("new-images", (event) => {
-    paths = event.payload;
-    console.log(paths);
+  let manager = $state<ImageInfoManager>(new ImageInfoManager());
+
+  function handleImagePaths(resp: ImagePathsResp) {
+    const images = resp.paths.map((path) => {
+      return new ImageInfo(path);
+    });
+    manager.addImages(images);
+  }
+
+  let unlisten;
+  onMount(async () => {
+    unlisten = listen<ImagePathsResp>("new-images", (event) => {
+      handleImagePaths(event.payload);
+    });
+
+    // 初回はlistenが間に合わないので、明示的にリクエストを送る
+    // ※万が一重複した場合は ImageInfoManager 側で排除
+    const resp = await invoke("get_prev_image_paths", {});
+    handleImagePaths(resp);
   });
 
-  // TODO: unlisten
   onDestroy(() => {
     if (unlisten && typeof unlisten === "function") {
       unlisten();
@@ -21,7 +42,7 @@
 
 <main class="container">
   <h1>Viewer Test</h1>
-  {#each paths as path}
-    <div>{path}</div>
+  {#each manager.getList() as imageInfo}
+    <div>{imageInfo.path}</div>
   {/each}
 </main>
