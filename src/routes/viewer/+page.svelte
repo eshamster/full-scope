@@ -63,7 +63,7 @@
       controller.downModifierKey("shift");
       break;
     case 2:
-      controller.execute("prev");
+      controller.execute("RightClick");
       break;
     }
   }
@@ -115,6 +115,9 @@
     });
     document.addEventListener("mouseleave", (event) => {
       handleMouseleave(event);
+    });
+    document.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
     });
   });
 
