@@ -6,6 +6,8 @@
   import { ImageInfo } from "./image-info";
   import { ImageInfoManager } from "./image-info-manager.svelte";
 
+  getCurrentWindow().setFullscreen(true);
+
   type ImagePathsResp = {
     id: number;
     paths: string[];
@@ -53,9 +55,49 @@
 </script>
 
 <main class="container">
-  <h1>Viewer Test</h1>
+  {#if manager.getList().length > 0}
+    <img id="image" src={convertFileSrc(manager.getList()[0].path)} alt={manager.getList()[0].path} />
+  {/if}
+  <!--
   {#each manager.getList() as imageInfo}
     <div>{convertFileSrc(imageInfo.path)}</div>
     <img src={convertFileSrc(imageInfo.path)} alt={imageInfo.path} />
   {/each}
+  -->
 </main>
+
+<style>
+
+  body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  .container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  #image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+  }
+
+</style>
