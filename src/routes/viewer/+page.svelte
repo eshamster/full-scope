@@ -5,6 +5,7 @@
   import { onMount, onDestroy } from "svelte";
   import { ImageInfo } from "./image-info";
   import { ImageInfoManager } from "./image-info-manager.svelte";
+  import { Controler } from "./controller";
 
   getCurrentWindow().setFullscreen(true);
 
@@ -14,6 +15,7 @@
   };
 
   let manager = $state<ImageInfoManager>(new ImageInfoManager());
+  let controller = new Controler(manager);
 
   function handleImagePaths(resp: ImagePathsResp) {
     const images = resp.paths.map((path) => {
@@ -26,6 +28,7 @@
     if (event.key === "Escape") {
       getCurrentWindow().close();
     }
+    controller.execute(event.key);
   }
 
   function handleWheel(event: WheelEvent) {

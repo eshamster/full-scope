@@ -35,21 +35,29 @@ export class ImageInfoManager {
     this.caret = Math.max(0, Math.min(this.list.length - 1, value));
   }
 
-  public gotoNext(): void {
-    if (this.caret + 1 >= this.list.length) {
+  public gotoNext(step: number = 1): void {
+    console.log(this.caret);
+    if (this.caret === this.list.length - 1) {
       this.setCaret(0);
-    } else {
-      this.setCaret(this.caret + 1);
-    }
-  }
-  public gotoPrev(): void {
-    if (this.caret - 1 < 0) {
+    } else if (this.caret + step >= this.list.length) {
       this.setCaret(this.list.length - 1);
     } else {
-      this.setCaret(this.caret - 1);
+      this.setCaret(this.caret + step);
     }
   }
-  public goto(value: number): void {
+  public gotoPrev(step: number = 1): void {
+    if (this.caret === 0) {
+      this.setCaret(this.list.length - 1);
+    } else if (this.caret - step < 0) {
+      this.setCaret(0);
+    } else {
+      this.setCaret(this.caret - step);
+    }
+  }
+  public gotoRandom(): void {
+    this.setCaret(Math.floor(Math.random() * this.list.length));
+  }
+  public gotoAt(value: number): void {
     this.setCaret(value);
   }
 }
