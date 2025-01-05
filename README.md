@@ -1,7 +1,29 @@
-# Tauri + SvelteKit + TypeScript
+# Full Scope
 
-This template should help get you started developing with Tauri, SvelteKit and TypeScript in Vite.
+フルスクリーン画像ビューア  
+兼 Rust (Tauri), Svelte勉強用
 
-## Recommended IDE Setup
+## setup & run
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer).
+setup
+
+```sh
+pnpm install
+pnpm tauri android init
+```
+
+run
+
+```sh
+pnpm tauri dev
+```
+
+## build
+
+```sh
+pnpm tauri build
+```
+
+## License
+
+Licensed under the MIT License.
