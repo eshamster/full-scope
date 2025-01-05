@@ -70,6 +70,9 @@
 
 <main class="container">
   {#if manager.getList().length > 0}
+    <div id="page">
+      {manager.getCaret() + 1} / {manager.getList().length}
+    </div>
     <img id="image" src={convertFileSrc(manager.getCurrent().path)} alt={manager.getCurrent().path} />
   {/if}
   <!--
@@ -112,6 +115,15 @@
     height: 100%;
     object-fit: contain;
     object-position: center;
+  }
+
+  #page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: rgba(0, 0, 0, 0.5);
+    background-color: white;
+    padding: 0.5em;
   }
 
 </style>
