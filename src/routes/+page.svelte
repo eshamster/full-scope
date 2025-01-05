@@ -8,6 +8,12 @@
     await invoke("drop", { paths: inputPaths });
   }
 
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === "Escape") {
+      getCurrentWindow().close();
+    }
+  }
+
   let unlisten;
   onMount(() => {
     // NOTE: window全体でのlistenなので特定のelementに絞りたい場合は下記参照
@@ -16,6 +22,10 @@
       if (event.payload.type === 'drop') {
         handleDrop(event);
       }
+
+      document.addEventListener("keydown", (event) => {
+        handleKeydown(event);
+      });
     })
   });
   onDestroy(() => {

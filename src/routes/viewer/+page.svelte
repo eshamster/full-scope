@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke, convertFileSrc } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount, onDestroy } from "svelte";
   import { ImageInfo } from "./image-info";
   import { ImageInfoManager } from "./image-info-manager.svelte";
@@ -19,6 +20,12 @@
     manager.addImages(images);
   }
 
+  function handleKeydown(event: KeyboardEvent) {
+    if (event.key === "Escape") {
+      getCurrentWindow().close();
+    }
+  }
+
   let unlisten;
   onMount(async () => {
     unlisten = listen<ImagePathsResp>("new-images", (event) => {
@@ -29,6 +36,11 @@
     // ※万が一重複した場合は ImageInfoManager 側で排除
     const resp = await invoke("get_prev_image_paths", {});
     handleImagePaths(resp);
+
+    // ESCキーでウィンドウを閉じる
+    document.addEventListener("keydown", (event) => {
+      handleKeydown(event);
+    });
   });
 
   onDestroy(() => {
