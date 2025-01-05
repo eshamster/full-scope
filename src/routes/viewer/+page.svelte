@@ -28,16 +28,63 @@
     if (event.key === "Escape") {
       getCurrentWindow().close();
     }
+    switch (event.key.toLowerCase()) {
+    case "shift":
+      controller.downModifierKey("shift");
+      return;
+    case "control":
+      controller.downModifierKey("ctrl");
+      return;
+    case "alt":
+      controller.downModifierKey("alt");
+      return;
+    }
+
     controller.execute(event.key);
+  }
+  function handleKeyup(event: KeyboardEvent) {
+    switch (event.key.toLowerCase()) {
+    case "shift":
+      controller.upModifierKey("shift");
+      return;
+    case "control":
+      controller.upModifierKey("ctrl");
+      return;
+    case "alt":
+      controller.upModifierKey("alt");
+      return;
+    }
+  }
+
+  function handleMouseDown(event: MouseEvent) {
+    switch (event.button) {
+    case 0:
+      // 左クリックはshiftキー扱い
+      controller.downModifierKey("shift");
+      break;
+    case 2:
+      controller.execute("prev");
+      break;
+    }
+  }
+  function handleMouseUp(event: MouseEvent) {
+    switch (event.button) {
+    case 0:
+      controller.upModifierKey("shift");
+      break;
+    }
   }
 
   function handleWheel(event: WheelEvent) {
-    // マウスホイールで画像を切り替える
     if (event.deltaY > 0) {
-      manager.gotoNext();
+      controller.execute("WheelDown");
     } else {
-      manager.gotoPrev();
+      controller.execute("WheelUp");
     }
+  }
+
+  function handleMouseleave(event: MouseEvent) {
+    controller.resetModifierKeys();
   }
 
   let unlisten;
@@ -54,8 +101,20 @@
     document.addEventListener("keydown", (event) => {
       handleKeydown(event);
     });
+    document.addEventListener("keyup", (event) => {
+      handleKeyup(event);
+    });
+    document.addEventListener("mousedown", (event) => {
+      handleMouseDown(event);
+    });
+    document.addEventListener("mouseup", (event) => {
+      handleMouseUp(event);
+    });
     document.addEventListener("wheel", (event) => {
       handleWheel(event);
+    });
+    document.addEventListener("mouseleave", (event) => {
+      handleMouseleave(event);
     });
   });
 

@@ -14,17 +14,31 @@ export class Controler {
   private modfierKeyMap = new Map<ModifierKey, boolean>();
 
   constructor(private imageInfoManager: ImageInfoManager) {
-    this.keyToOperations.set('ArrowRight', 'next');
-    this.keyToOperations.set('ArrowLeft', 'prev');
-    this.keyToOperations.set('ArrowDown', 'nextJump');
-    this.keyToOperations.set('ArrowUp', 'prevJump');
-    this.keyToOperations.set('q', 'randomJump');
+    this.setKeyBind('ArrowRight', 'next');
+    this.setKeyBind('WheelDown', 'next');
+    this.setKeyBind('ArrowLeft', 'prev');
+    this.setKeyBind('WheelUp', 'prev');
+    this.setKeyBind('ArrowDown', 'nextJump');
+    this.setKeyBind('shift:WheelDown', 'nextJump');
+    this.setKeyBind('ArrowUp', 'prevJump');
+    this.setKeyBind('shift:WheelUp', 'prevJump');
+    this.setKeyBind('q', 'randomJump');
+    this.setKeyBind('RightClick', 'randomJump');
+  }
+
+  private setKeyBind(key: string, operation: Operation): void {
+    this.keyToOperations.set(key.toLowerCase(), operation);
   }
 
   public execute(rawKey: string): void {
-    console.log(rawKey);
+    // modifierKeyの場合は何もしない
+    if (['control', 'shift', 'alt'].includes(rawKey.toLowerCase())) {
+      return
+    }
 
     const key = this.keyToString(rawKey);
+    console.log(key);
+
     if (this.keyToOperations.has(key)) {
       const operation = this.keyToOperations.get(key);
       if (operation === 'next') {
@@ -38,18 +52,13 @@ export class Controler {
       } else if (operation === 'randomJump') {
         this.imageInfoManager.gotoRandom();
       }
-    } else if (key === 'ctrl') {
-      this.downModifierKey('ctrl');
-    } else if (key === 'shift') {
-      this.downModifierKey('shift');
-    } else if (key === 'alt') {
-      this.downModifierKey('alt');
     }
   }
 
   private keyToString(key: string): string {
     const modfierKeys = this.getModfierKeys();
-    return modfierKeys.length === 0 ? key : `${modfierKeys.join('+')}+${key}`;
+    const modified = modfierKeys.length === 0 ? key : `${modfierKeys.join(',')}:${key}`;
+    return modified.toLowerCase();
   }
 
   // --- 修飾キー関連の操作 --- //
@@ -68,7 +77,7 @@ export class Controler {
   public upModifierKey(key: ModifierKey): void {
     this.modfierKeyMap.set(key, false);
   }
-  public resetModifierKey(): void {
+  public resetModifierKeys(): void {
     this.modfierKeyMap.clear();
   }
 }
