@@ -28,6 +28,15 @@
     }
   }
 
+  function handleWheel(event: WheelEvent) {
+    // マウスホイールで画像を切り替える
+    if (event.deltaY > 0) {
+      manager.gotoNext();
+    } else {
+      manager.gotoPrev();
+    }
+  }
+
   let unlisten;
   onMount(async () => {
     unlisten = listen<ImagePathsResp>("new-images", (event) => {
@@ -39,9 +48,11 @@
     const resp = await invoke("get_prev_image_paths", {});
     handleImagePaths(resp);
 
-    // ESCキーでウィンドウを閉じる
     document.addEventListener("keydown", (event) => {
       handleKeydown(event);
+    });
+    document.addEventListener("wheel", (event) => {
+      handleWheel(event);
     });
   });
 
@@ -56,7 +67,7 @@
 
 <main class="container">
   {#if manager.getList().length > 0}
-    <img id="image" src={convertFileSrc(manager.getList()[0].path)} alt={manager.getList()[0].path} />
+    <img id="image" src={convertFileSrc(manager.getCurrent().path)} alt={manager.getCurrent().path} />
   {/if}
   <!--
   {#each manager.getList() as imageInfo}
