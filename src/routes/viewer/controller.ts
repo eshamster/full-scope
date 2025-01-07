@@ -9,21 +9,38 @@ export type Operation =
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
+type keyConfig = {
+  key: string;
+  operation: Operation;
+  modifierKeys: ModifierKey[];
+};
+
+// TODO: ファイルから読み込むようにする
+const keyConfigs: keyConfig[] = [
+  { key: 'ArrowRight', operation: 'next', modifierKeys: [] },
+  { key: 'WheelDown', operation: 'next', modifierKeys: [] },
+  { key: 'ArrowLeft', operation: 'prev', modifierKeys: [] },
+  { key: 'WheelUp', operation: 'prev', modifierKeys: [] },
+  { key: 'ArrowDown', operation: 'nextJump', modifierKeys: [] },
+  { key: 'WheelDown', operation: 'nextJump', modifierKeys: ['shift'] },
+  { key: 'ArrowUp', operation: 'prevJump', modifierKeys: [] },
+  { key: 'WheelUp', operation: 'prevJump', modifierKeys: ['shift'] },
+  { key: 'q', operation: 'randomJump', modifierKeys: [] },
+  { key: 'RightClick', operation: 'randomJump', modifierKeys: [] },
+];
+
 export class Controler {
   private keyToOperations = new Map<string, Operation>();
   private modfierKeyMap = new Map<ModifierKey, boolean>();
 
   constructor(private imageInfoManager: ImageInfoManager) {
-    this.setKeyBind('ArrowRight', 'next');
-    this.setKeyBind('WheelDown', 'next');
-    this.setKeyBind('ArrowLeft', 'prev');
-    this.setKeyBind('WheelUp', 'prev');
-    this.setKeyBind('ArrowDown', 'nextJump');
-    this.setKeyBind('shift:WheelDown', 'nextJump');
-    this.setKeyBind('ArrowUp', 'prevJump');
-    this.setKeyBind('shift:WheelUp', 'prevJump');
-    this.setKeyBind('q', 'randomJump');
-    this.setKeyBind('RightClick', 'randomJump');
+    this.readKeyConfigs(keyConfigs);
+  }
+
+  private readKeyConfigs(configs: keyConfig[]): void {
+    configs.forEach(({ key, operation, modifierKeys }) => {
+      this.setKeyBind(this.keyToString(key, modifierKeys), operation);
+    });
   }
 
   private setKeyBind(key: string, operation: Operation): void {
@@ -55,9 +72,12 @@ export class Controler {
     }
   }
 
-  private keyToString(key: string): string {
-    const modfierKeys = this.getModfierKeys();
-    const modified = modfierKeys.length === 0 ? key : `${modfierKeys.join(',')}:${key}`;
+  private keyToString(
+    key: string,
+    modifierKeys: ModifierKey[] = this.getModfierKeys(),
+  ): string {
+    const modified = modifierKeys.length === 0 ?
+      key : `${modifierKeys.join(',')}:${key}`;
     return modified.toLowerCase();
   }
 
