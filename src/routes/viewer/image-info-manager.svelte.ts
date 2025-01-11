@@ -35,6 +35,8 @@ export class ImageInfoManager {
     this.caret = Math.max(0, Math.min(this.list.length - 1, value));
   }
 
+  // --- 移動関連 --- //
+
   public gotoNext(step: number = 1): void {
     console.log(this.caret);
     if (this.caret === this.list.length - 1) {
@@ -59,5 +61,14 @@ export class ImageInfoManager {
   }
   public gotoAt(value: number): void {
     this.setCaret(value);
+  }
+
+  // --- ファイル操作関連 --- //
+
+  public deleteCurrent(): void {
+    const current = this.getCurrent();
+    this.list = this.list.filter((image) => image !== current);
+    this.pathSet.delete(current.path);
+    this.setCaret(this.caret);
   }
 }

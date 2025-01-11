@@ -1,5 +1,6 @@
 use std::sync::{Mutex, OnceLock};
 use tauri::{Emitter, Manager};
+use trash;
 
 const VIEWER_LABEL: &str = "viewer";
 const VIEWER_PAGE: &str = "viewer";
@@ -92,6 +93,23 @@ fn get_prev_image_paths() -> ImagePaths {
         .clone()
 }
 
+// 渡されたパスのファイルをゴミ箱に移動するTauriコマンド
+// TODO: クライアントに返したパスを記録してそれ以外のファイルは削除しないようにする
+#[tauri::command]
+fn delete_file(path: String) -> Result<(), String> {
+    let path = std::path::Path::new(&path);
+    if path.is_file() {
+        let trash = trash::delete(path);
+        if trash.is_ok() {
+            Ok(())
+        } else {
+            Err(trash.err().unwrap().to_string())
+        }
+    } else {
+        Err("not a file".to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     IMAGE_PATHS_MUTEX
@@ -103,7 +121,11 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![drop, get_prev_image_paths])
+        .invoke_handler(tauri::generate_handler![
+            drop,
+            get_prev_image_paths,
+            delete_file
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

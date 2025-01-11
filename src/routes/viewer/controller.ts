@@ -1,11 +1,14 @@
 import { ImageInfoManager } from "./image-info-manager.svelte";
+import { DialogController } from "./dialog-controller.svelte";
+import { FileController } from "./file-controller";
 
 export type Operation =
   'next' |
   'prev' |
   'nextJump' |
   'prevJump' |
-  'randomJump';
+  'randomJump' |
+  'delete';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -27,13 +30,18 @@ const keyConfigs: keyConfig[] = [
   { key: 'WheelUp', operation: 'prevJump', modifierKeys: ['shift'] },
   { key: 'q', operation: 'randomJump', modifierKeys: [] },
   { key: 'RightClick', operation: 'randomJump', modifierKeys: [] },
+  { key: 'Delete', operation: 'delete', modifierKeys: [] },
 ];
 
 export class Controler {
   private keyToOperations = new Map<string, Operation>();
   private modfierKeyMap = new Map<ModifierKey, boolean>();
 
-  constructor(private imageInfoManager: ImageInfoManager) {
+  constructor(
+    private imageInfoManager: ImageInfoManager,
+    private dialogController: DialogController,
+    private fileController: FileController,
+  ) {
     this.readKeyConfigs(keyConfigs);
   }
 
@@ -47,7 +55,7 @@ export class Controler {
     this.keyToOperations.set(key.toLowerCase(), operation);
   }
 
-  public execute(rawKey: string): void {
+  public operateByKey(rawKey: string): void {
     // modifierKeyの場合は何もしない
     if (['control', 'shift', 'alt'].includes(rawKey.toLowerCase())) {
       return
@@ -58,17 +66,44 @@ export class Controler {
 
     if (this.keyToOperations.has(key)) {
       const operation = this.keyToOperations.get(key);
-      if (operation === 'next') {
-        this.imageInfoManager.gotoNext();
-      } else if (operation === 'prev') {
-        this.imageInfoManager.gotoPrev();
-      } else if (operation === 'nextJump') {
-        this.imageInfoManager.gotoNext(10);
-      } else if (operation === 'prevJump') {
-        this.imageInfoManager.gotoPrev(10);
-      } else if (operation === 'randomJump') {
-        this.imageInfoManager.gotoRandom();
+      if (operation) {
+        this.operate(operation);
       }
+    }
+  }
+
+  private operate(operation: Operation): void {
+    if (this.dialogController.isShow()) {
+      return;
+    }
+
+    switch (operation) {
+      case 'next':
+        this.imageInfoManager.gotoNext();
+        break;
+      case 'prev':
+        this.imageInfoManager.gotoPrev();
+        break;
+      case 'nextJump':
+        this.imageInfoManager.gotoNext(10);
+        break;
+      case 'prevJump':
+        this.imageInfoManager.gotoPrev(10);
+        break;
+      case 'randomJump':
+        this.imageInfoManager.gotoRandom();
+        break;
+      case 'delete':
+        const path = this.imageInfoManager.getCurrent().path;
+        this.dialogController.showDialog(
+          `本当に画像をゴミ箱に移動しますか？\n${path}`,
+          (result: boolean) => {
+            if (result) {
+              this.imageInfoManager.deleteCurrent();
+              this.fileController.deleteFile(path);
+            }
+          });
+        break;
     }
   }
 

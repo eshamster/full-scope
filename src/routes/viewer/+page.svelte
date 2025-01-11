@@ -5,7 +5,10 @@
   import { onMount, onDestroy } from "svelte";
   import { ImageInfo } from "./image-info";
   import { ImageInfoManager } from "./image-info-manager.svelte";
+  import { DialogController } from "./dialog-controller.svelte";
+  import { FileController } from "./file-controller";
   import { Controler } from "./controller";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
 
   getCurrentWindow().setFullscreen(true);
 
@@ -15,7 +18,13 @@
   };
 
   let manager = $state<ImageInfoManager>(new ImageInfoManager());
-  let controller = new Controler(manager);
+  const dialogController = new DialogController();
+  const fileController = new FileController();
+  const controller = new Controler(
+    manager,
+    dialogController,
+    fileController,
+  );
 
   function handleImagePaths(resp: ImagePathsResp) {
     const images = resp.paths.map((path) => {
@@ -40,7 +49,7 @@
       return;
     }
 
-    controller.execute(event.key);
+    controller.operateByKey(event.key);
   }
   function handleKeyup(event: KeyboardEvent) {
     switch (event.key.toLowerCase()) {
@@ -63,7 +72,7 @@
       controller.downModifierKey("shift");
       break;
     case 2:
-      controller.execute("RightClick");
+      controller.operateByKey("RightClick");
       break;
     }
   }
@@ -77,9 +86,9 @@
 
   function handleWheel(event: WheelEvent) {
     if (event.deltaY > 0) {
-      controller.execute("WheelDown");
+      controller.operateByKey("WheelDown");
     } else {
-      controller.execute("WheelUp");
+      controller.operateByKey("WheelUp");
     }
   }
 
@@ -137,17 +146,18 @@
     </div>
     <img id="image" src={convertFileSrc(manager.getCurrent().path)} alt={manager.getCurrent().path} />
   {/if}
-  <!--
-  {#each manager.getList() as imageInfo}
-    <div>{convertFileSrc(imageInfo.path)}</div>
-    <img src={convertFileSrc(imageInfo.path)} alt={imageInfo.path} />
-  {/each}
-  -->
+
+<ConfirmDialog
+  show={dialogController.isShow()}
+  message={dialogController.getMessage()}
+  onNotify={(result: boolean) => dialogController.handleDialogNotify(result)}
+>
+</ConfirmDialog>
 </main>
 
 <style>
 
-  body {
+  main {
     margin: 0;
     padding: 0;
     display: flex;
@@ -183,9 +193,9 @@
     position: absolute;
     top: 0;
     left: 0;
-    color: rgba(0, 0, 0, 0.5);
-    background-color: white;
-    padding: 0.5em;
+    color: black;
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 0.2em;
   }
 
 </style>
