@@ -11,7 +11,9 @@ export type Operation =
   'randomJump' |
   'delete' |
   'bookmark' |
-  'gotoBookmark';
+  'gotoBookmark' |
+  'nextHistory' |
+  'prevHistory';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -35,6 +37,8 @@ const keyConfigs: keyConfig[] = [
   { key: 'RightClick', operation: 'randomJump', modifierKeys: [] },
   { key: 'b', operation: 'bookmark', modifierKeys: ['shift'] },
   { key: 'b', operation: 'gotoBookmark', modifierKeys: [] },
+  { key: 'h', operation: 'prevHistory', modifierKeys: [] },
+  { key: 'h', operation: 'nextHistory', modifierKeys: ['shift'] },
   { key: 'Delete', operation: 'delete', modifierKeys: [] },
 ];
 
@@ -120,6 +124,12 @@ export class Controler {
         break;
       case 'gotoBookmark':
         this.imageInfoManager.gotoNextBookmark();
+        break;
+      case 'nextHistory':
+        this.imageInfoManager.gotoNextHistory();
+        break;
+      case 'prevHistory':
+        this.imageInfoManager.gotoPrevHistory();
         break;
     }
   }

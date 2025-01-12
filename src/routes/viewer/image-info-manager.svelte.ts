@@ -1,5 +1,6 @@
 import { ImageInfo } from './image-info';
 import { Semaphore }  from 'await-semaphore';
+import { ImageShowHistory } from './image-show-history';
 
 // NOTE: 一度に閲覧する画像の総数はタカが知れている想定なので
 // 探索が必要な場合はリストをリニアになめることとする
@@ -10,6 +11,7 @@ export class ImageInfoManager {
   private pathSet: Set<string> = new Set();
   private semaphore = new Semaphore(1);
   private caret: number = $state(0);
+  private history: ImageShowHistory = new ImageShowHistory();
 
   public async addImages(images: ImageInfo[]): Promise<void> {
     // await this.semaphore.use(async () => {
@@ -35,8 +37,12 @@ export class ImageInfoManager {
   public getCaret(): number {
     return this.caret;
   }
-  private setCaret(value: number): void {
-    this.caret = Math.max(0, Math.min(this.list.length - 1, value));
+  private setCaret(value: number, addsHistory: boolean = false): void {
+    const next = Math.max(0, Math.min(this.list.length - 1, value));
+    if (addsHistory && this.caret !== next) {
+      this.addHistory(this.caret, next);
+    }
+    this.caret = next;
   }
 
   // --- 移動関連 --- //
@@ -60,7 +66,15 @@ export class ImageInfoManager {
     }
   }
   public gotoRandom(): void {
-    this.setCaret(Math.floor(Math.random() * this.list.length));
+    if (this.list.length <= 1) {
+      return;
+    }
+    // 現在位置を避けつつランダムに移動
+    let next = Math.floor(Math.random()* this.list.length - 1);
+    if (next >= this.caret) {
+      next++;
+    }
+    this.setCaret(next, true);
   }
   public gotoAt(value: number): void {
     this.setCaret(value);
@@ -72,6 +86,37 @@ export class ImageInfoManager {
       const index = (start + i) % this.list.length;
       if (this.list[index].isBookmarked()) {
         this.setCaret(index);
+        return;
+      }
+    }
+  }
+
+  // NOTE: goto(Next|Prev)History は
+  // 最悪で O(N*M) (N: 画像数, M: 履歴数) になるが、
+  // 履歴を深く辿ることは稀なはず（履歴上の画像が多数削除されているケース）で、
+  // 実質的には O(N) とみなして良い
+  public gotoNextHistory(): void {
+    for (
+      let next = this.history.gotoNextPath();
+      next !== null;
+      next = this.history.gotoNextPath()
+    ) {
+      const image = this.findImageByPath(next);
+      if (image !== null) {
+        this.setCaret(this.list.indexOf(image));
+        return;
+      }
+    }
+  }
+  public gotoPrevHistory(): void {
+    for (
+      let prev = this.history.gotoPrevPath();
+      prev !== null;
+      prev = this.history.gotoPrevPath()
+    ) {
+      const image = this.findImageByPath(prev);
+      if (image !== null) {
+        this.setCaret(this.list.indexOf(image));
         return;
       }
     }
@@ -93,5 +138,16 @@ export class ImageInfoManager {
   }
   public countBookmarked(): number {
     return this.list.filter((image) => image.isBookmarked()).length;
+  }
+
+  // --- 補助 --- //
+
+  private addHistory(prev: number, next: number): void {
+    this.history.add(this.list[prev].path, this.list[next].path);
+  }
+
+  private findImageByPath(path: string): ImageInfo | null {
+    const index = this.list.findIndex((image) => image.path === path);
+    return index === -1 ? null : this.list[index];
   }
 }
