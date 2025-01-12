@@ -1,6 +1,10 @@
 import { ImageInfo } from './image-info';
 import { Semaphore }  from 'await-semaphore';
 
+// NOTE: 一度に閲覧する画像の総数はタカが知れている想定なので
+// 探索が必要な場合はリストをリニアになめることとする
+// （多くても5桁前半ぐらいの想定）
+
 export class ImageInfoManager {
   private list: ImageInfo[] = $state([]);
   private pathSet: Set<string> = new Set();
@@ -38,7 +42,6 @@ export class ImageInfoManager {
   // --- 移動関連 --- //
 
   public gotoNext(step: number = 1): void {
-    console.log(this.caret);
     if (this.caret === this.list.length - 1) {
       this.setCaret(0);
     } else if (this.caret + step >= this.list.length) {
@@ -63,6 +66,17 @@ export class ImageInfoManager {
     this.setCaret(value);
   }
 
+  public gotoNextBookmark(): void {
+    const start = this.caret;
+    for (let i = 1; i <= this.list.length; i++) {
+      const index = (start + i) % this.list.length;
+      if (this.list[index].isBookmarked()) {
+        this.setCaret(index);
+        return;
+      }
+    }
+  }
+
   // --- ファイル操作関連 --- //
 
   public deleteCurrent(): void {
@@ -70,5 +84,14 @@ export class ImageInfoManager {
     this.list = this.list.filter((image) => image !== current);
     this.pathSet.delete(current.path);
     this.setCaret(this.caret);
+  }
+
+  // --- 未分類 --- //
+
+  public bookmarkCurrent(): void {
+    this.getCurrent().bookmark();
+  }
+  public countBookmarked(): number {
+    return this.list.filter((image) => image.isBookmarked()).length;
   }
 }

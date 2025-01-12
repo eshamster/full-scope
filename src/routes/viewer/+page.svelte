@@ -7,8 +7,10 @@
   import { ImageInfoManager } from "./image-info-manager.svelte";
   import { DialogController } from "./dialog-controller.svelte";
   import { FileController } from "./file-controller";
+  import { ToastController } from "./toast-controller.svelte";
   import { Controler } from "./controller";
   import ConfirmDialog from "./ConfirmDialog.svelte";
+  import CornerToast from "./CornerToast.svelte";
 
   getCurrentWindow().setFullscreen(true);
 
@@ -20,10 +22,12 @@
   let manager = $state<ImageInfoManager>(new ImageInfoManager());
   const dialogController = new DialogController();
   const fileController = new FileController();
+  const toastController = new ToastController();
   const controller = new Controler(
     manager,
     dialogController,
     fileController,
+    toastController,
   );
 
   function handleImagePaths(resp: ImagePathsResp) {
@@ -153,6 +157,12 @@
   onNotify={(result: boolean) => dialogController.handleDialogNotify(result)}
 >
 </ConfirmDialog>
+
+<CornerToast
+  show={toastController.isShow()}
+  message={toastController.getMessage()}
+>
+</CornerToast>
 </main>
 
 <style>

@@ -1,6 +1,7 @@
 import { ImageInfoManager } from "./image-info-manager.svelte";
 import { DialogController } from "./dialog-controller.svelte";
 import { FileController } from "./file-controller";
+import { ToastController } from "./toast-controller.svelte";
 
 export type Operation =
   'next' |
@@ -8,7 +9,9 @@ export type Operation =
   'nextJump' |
   'prevJump' |
   'randomJump' |
-  'delete';
+  'delete' |
+  'bookmark' |
+  'gotoBookmark';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -30,6 +33,8 @@ const keyConfigs: keyConfig[] = [
   { key: 'WheelUp', operation: 'prevJump', modifierKeys: ['shift'] },
   { key: 'q', operation: 'randomJump', modifierKeys: [] },
   { key: 'RightClick', operation: 'randomJump', modifierKeys: [] },
+  { key: 'b', operation: 'bookmark', modifierKeys: ['shift'] },
+  { key: 'b', operation: 'gotoBookmark', modifierKeys: [] },
   { key: 'Delete', operation: 'delete', modifierKeys: [] },
 ];
 
@@ -41,6 +46,7 @@ export class Controler {
     private imageInfoManager: ImageInfoManager,
     private dialogController: DialogController,
     private fileController: FileController,
+    private toastController: ToastController,
   ) {
     this.readKeyConfigs(keyConfigs);
   }
@@ -62,13 +68,11 @@ export class Controler {
     }
 
     const key = this.keyToString(rawKey);
-    console.log(key);
 
-    if (this.keyToOperations.has(key)) {
-      const operation = this.keyToOperations.get(key);
-      if (operation) {
-        this.operate(operation);
-      }
+    const operation = this.keyToOperations.get(key);
+    // console.log(`key: ${key}, operation: ${operation}`); // debug
+    if (operation) {
+      this.operate(operation);
     }
   }
 
@@ -103,6 +107,19 @@ export class Controler {
               this.fileController.deleteFile(path);
             }
           });
+        break;
+      case 'bookmark':
+        const current = this.imageInfoManager.getCurrent();
+        const count = this.imageInfoManager.countBookmarked();
+        const message = current.isBookmarked() ?
+          `ブックマークを解除しました: ${count}->${count - 1}` :
+          `ブックマークしました: ${count}->${count + 1}`;
+        this.toastController.showToast(message);
+
+        this.imageInfoManager.bookmarkCurrent();
+        break;
+      case 'gotoBookmark':
+        this.imageInfoManager.gotoNextBookmark();
         break;
     }
   }

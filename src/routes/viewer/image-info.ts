@@ -1,5 +1,14 @@
 export class ImageInfo {
-    constructor(
-        public path: string,
-    ) { }
+  private tempBookmark: boolean = false;
+
+  constructor(
+    public path: string,
+  ) { }
+
+  public bookmark(): void {
+    this.tempBookmark = !this.tempBookmark;
+  }
+  public isBookmarked(): boolean {
+    return this.tempBookmark;
+  }
 }
