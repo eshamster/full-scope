@@ -1,30 +1,42 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
 
   type Props = {
     message: string;
-    onNotify: (result: bool) => void;
+    onNotify: (result: boolean) => void;
+    show: boolean;
   };
 
   const { message, onNotify, show }: Props = $props();
 
-  // NOTE: documentでなくダイアログのdiv要素に付けるべき？
-  // （現状複数のダイアログを設置する予定はないのでいったんこのまま）
+  let keyHandler: (e: KeyboardEvent) => void;
   onMount(() => {
-    document.addEventListener('keydown', (e) => {
-      if (!show || !onNotify) {
-        return;
+    keyHandler = (e: KeyboardEvent) => {
+      if (!show || !onNotify) return;
+      // ダイアログ表示中は Enter/Esc をダイアログ処理に限定し、下位のリスナーへ伝播しない
+      const key = e.key.toLowerCase();
+      switch (key) {
+        case 'y':
+        case 'enter':
+          e.preventDefault();
+          e.stopPropagation();
+          onNotify(true);
+          break;
+        case 'n':
+        case 'escape':
+          e.preventDefault();
+          e.stopPropagation();
+          onNotify(false);
+          break;
+        default:
+          return;
       }
-
-      switch (e.key) {
-      case 'y':
-        onNotify(true);
-        break;
-      case 'n':
-        onNotify(false);
-        break;
-      }
-    });
+    };
+    // キャプチャフェーズでハンドラを登録し、バブリングフェーズの他リスナーを阻止
+    document.addEventListener('keydown', keyHandler, true);
+  });
+  onDestroy(() => {
+    document.removeEventListener('keydown', keyHandler, true);
   });
 </script>
 
