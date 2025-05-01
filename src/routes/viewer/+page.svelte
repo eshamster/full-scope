@@ -75,6 +75,9 @@
       // 左クリックはshiftキー扱い
       controller.downModifierKey("shift");
       break;
+    case 1:
+      controller.operateByKey("MiddleClick");
+      break;
     case 2:
       controller.operateByKey("RightClick");
       break;
