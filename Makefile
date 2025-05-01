@@ -4,4 +4,4 @@ run:
 	npm run tauri dev
 
 build:
-	npm run build
+	npm run tauri build
