@@ -8,6 +8,7 @@
   import { DialogController } from "./dialog-controller.svelte";
   import { FileController } from "./file-controller";
   import { ToastController } from "./toast-controller.svelte";
+  import { ViewerController } from "./viewer-controller.svelte";
   import { Controler } from "./controller";
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import CornerToast from "./CornerToast.svelte";
@@ -23,13 +24,23 @@
   const dialogController = new DialogController();
   const fileController = new FileController();
   const toastController = new ToastController();
+  const viewerController = new ViewerController();
   const controller = new Controler(
     manager,
     dialogController,
     fileController,
     toastController,
+    viewerController,
   );
 
+  let currentImages = $derived<ImageInfo[]>(() => {
+    return manager.getCurrentList(
+      viewerController.getRows() *
+      viewerController.getCols(),
+    );
+  });
+
+  // コアプロセスから画像のパスを受け取ったときの処理
   function handleImagePaths(resp: ImagePathsResp) {
     const images = resp.paths.map((path) => {
       return new ImageInfo(path);
@@ -151,7 +162,21 @@
     <div id="page">
       {manager.getCaret() + 1} / {manager.getList().length}
     </div>
-    <img id="image" src={convertFileSrc(manager.getCurrent().path)} alt={manager.getCurrent().path} />
+    <div id="debug">
+    </div>
+    <div
+      class="grid"
+      style="
+             gride-template-rows: repeat({viewerController.getRows()}, 1fr);
+             grid-template-columns: repeat({viewerController.getCols()}, 1fr);
+             "
+    >
+      {#each currentImages() as img (img.path)}
+        <div class="cell">
+          <img id="image" src={convertFileSrc(img.path)} alt={img.path} />
+        </div>
+      {/each}
+    </div>
   {/if}
 
 <ConfirmDialog
@@ -193,6 +218,33 @@
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+  }
+
+  .grid {
+    position: absolute;
+    display: grid;
+    width: 100%;
+    height: 100%;
+  }
+  .cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+  .cell img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  #debug {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    color: black;
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 0.2em;
   }
 
   #image {

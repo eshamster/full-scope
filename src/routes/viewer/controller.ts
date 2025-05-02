@@ -2,6 +2,7 @@ import { ImageInfoManager } from "./image-info-manager.svelte";
 import { DialogController } from "./dialog-controller.svelte";
 import { FileController } from "./file-controller";
 import { ToastController } from "./toast-controller.svelte";
+import { ViewerController } from "./viewer-controller.svelte";
 
 export type Operation =
   'next' |
@@ -13,7 +14,11 @@ export type Operation =
   'bookmark' |
   'gotoBookmark' |
   'nextHistory' |
-  'prevHistory';
+  'prevHistory' |
+  'incrementRows' |
+  'decrementRows' |
+  'incrementCols' |
+  'decrementCols';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -42,9 +47,13 @@ const keyConfigs: keyConfig[] = [
   { key: 'h', operation: 'prevHistory', modifierKeys: [] },
   { key: 'h', operation: 'nextHistory', modifierKeys: ['shift'] },
   { key: 'Delete', operation: 'delete', modifierKeys: [] },
+  { key: 'r', operation: 'incrementRows', modifierKeys: [] },
+  { key: 'r', operation: 'decrementRows', modifierKeys: ['shift'] },
+  { key: 'l', operation: 'incrementCols', modifierKeys: [] },
+  { key: 'l', operation: 'decrementCols', modifierKeys: ['shift'] },
 ];
 
-export class Controler {
+  export class Controler {
   private keyToOperations = new Map<string, Operation>();
   private modfierKeyMap = new Map<ModifierKey, boolean>();
 
@@ -53,6 +62,7 @@ export class Controler {
     private dialogController: DialogController,
     private fileController: FileController,
     private toastController: ToastController,
+    private viewerController: ViewerController,
   ) {
     this.readKeyConfigs(keyConfigs);
   }
@@ -132,6 +142,18 @@ export class Controler {
         break;
       case 'prevHistory':
         this.imageInfoManager.gotoPrevHistory();
+        break;
+      case 'incrementRows':
+        this.viewerController.incrementRows();
+        break;
+      case 'decrementRows':
+        this.viewerController.decrementRows();
+        break;
+      case 'incrementCols':
+        this.viewerController.incrementCols();
+        break;
+      case 'decrementCols':
+        this.viewerController.decrementCols();
         break;
     }
   }

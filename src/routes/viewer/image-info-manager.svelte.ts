@@ -33,6 +33,17 @@ export class ImageInfoManager {
     }
     return this.list[this.caret];
   }
+  public getCurrentList(count: number): ImageInfo {
+    if (this.list.length === 0) {
+      throw new Error('No images');
+    }
+    if (count < 1) {
+      throw new Error('Invalid count');
+    }
+    const start = this.caret;
+    const end = Math.min(this.list.length, start + count);
+    return this.list.slice(start, end);
+  }
 
   public getCaret(): number {
     return this.caret;
