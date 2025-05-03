@@ -1,64 +1,68 @@
-# Codex
+# Full Scope Codex
 
-このドキュメントは、プロジェクト「Full Scope」の基本要素をまとめた参照用コーデックスです。
-今後の指示や理解のために参照してください。
-
----
-
-## プロジェクト概要
-- 名称：Full Scope
-- 説明：フルスクリーン画像ビューア。Rust (Tauri) と SvelteKit/TypeScript の学習用サンプル。
-- ライセンス：MIT
+## 概要
+- フルスクリーン画像ビューア（Rust/Tauri + SvelteKit）
+- 学習用サンプルを兼ねる
 
 ## 技術スタック
-- フロントエンド：SvelteKit, TypeScript, Vite
-- バックエンド：Rust, Tauri v2, tauri-plugin-opener
-- パッケージ管理：pnpm
-- ビルドツール：Makefile（`make run`, `make build`）
+- FE: SvelteKit v5, TypeScript, Vite
+- BE: Rust, Tauri v2
+- 管理: pnpm, Makefile
 
-## ディレクトリ構成
+## ディレクトリ構成（主要）
+- src/ → SvelteKit アプリ
+- src-tauri/ → Rust（Tauri）コード
+- static/ → 静的アセット
+- package.json, Makefile
+
+## 主要フロー
+1. 画像を Drag & Drop
+2. SvelteKit → Tauri \\`drop(paths)\\` → パス抽出
+3. ビューア生成 → \\`new-images\\` emit
+4. /viewer 受信 → ImageInfoManager 登録・表示
+5. 操作（次へ/前へ/削除/ブックマーク）
+
+## 主要コンポーネント
+- ImageInfoManager：画像リスト・履歴管理
+- Controller：キー操作⇔アクション
+- FileController：ゴミ箱移動（Tauri command）
+- DialogController：削除確認ダイアログ
+- ToastController：一時通知
+
+## よく使うコマンド
+- \\`make run\\` → 開発モード
+- \\`make build\\` → 本番ビルド
+
+## よくある間違いと対策
+### SvelteKit v5 でLegacyとなっている書き方をしない
+
+`$:` 記法は利用しない。
+`$derived`, `$effect` で代替する
+
+- NG1: `$derived` で置き換える例
+
+```js
+let count = 1;
+$: double = cound * 2;
 ```
-.
-├─ codex.md           # 本ファイル
-├─ README.md          # プロジェクト概要・セットアップ
-├─ src/               # SvelteKit アプリケーション
-│   ├─ app.html       # HTML テンプレート
-│   └─ routes/
-│       ├─ +page.svelte           # トップページ (Drag & Drop)
-│       └─ viewer/                # ビューア用ページ・コンポーネント群
-├─ build/             # Vite/SvelteKit ビルド出力
-├─ static/            # 静的アセット (favicon, logo など)
-├─ src-tauri/         # Tauri (Rust) アプリケーション
-│   ├─ src/
-│   │   ├─ main.rs    # エントリポイント
-│   │   └─ lib.rs     # Tauri コマンド実装
-│   └─ tauri.conf.json
-├─ package.json, pnpm-lock.yaml
-└─ Makefile
+
+- OK1
+
+```js
+let count = $state(1);
+let double = $derived(count * 2);
 ```
 
-## 主な機能フロー
-1. トップページに画像ファイルやフォルダをドラッグ & ドロップ
-2. SvelteKit から Tauri コマンド `drop(paths)` を呼び出し
-3. Rust 側でファイル拡張子をチェックし、画像パスを抽出
-4. ビューアウィンドウを生成／表示し、`new-images` イベントを emit
-5. /viewer ページで受信し、ImageInfoManager に登録して表示
-6. キー／ホイール／マウス操作で画像の切り替え、履歴、ランダム、ブックマーク、削除などを実行
+- NG2: `$effect` で置き換える例
 
-## 主なコンポーネント／クラス
-- ImageInfoManager：画像リスト・カーソル位置・履歴管理
-- Controler：キー操作⇔アプリ動作マッピング（次へ／前へ／削除／ブックマーク 等）
-- DialogController / ConfirmDialog：削除確認ダイアログ
-- ToastController / CornerToast：一時通知 (ブックマーク成功メッセージ 等)
-- FileController：Tauri コマンド経由でゴミ箱へ移動
-- Rust (`lib.rs`)：`drop`, `get_prev_image_paths`, `delete_file` コマンド実装
+```js
+let count = 1;
+$: { console.log(`count changed → ${count}`); }
+```
 
-## 開発・ビルド
-- 依存インストール：`pnpm install`
-- Tauri 初期化（Android 含む）：`pnpm tauri android init`
-- 開発モード起動：`pnpm tauri dev` または `make run`
-- 本番ビルド：`pnpm tauri build` または `make build`
+- OK2
 
----
-## 更新履歴
-- 2025-04-30: codex.md 作成・基本要素をまとめる
+```js
+let count = $state(1);
+$effect(() => { console.log(`count changed → ${count}`); });
+```
