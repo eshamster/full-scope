@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
+  import { dropPaths } from "@/lib/api/files";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount, onDestroy } from "svelte";
   import type { Event } from "@tauri-apps/api/event";
@@ -8,7 +8,7 @@
   async function handleDrop(event: Event<DragDropEvent>) {
     if (event.payload.type === 'drop') {
       const inputPaths = event.payload.paths;
-      await invoke("drop", { paths: inputPaths });
+      await dropPaths(inputPaths);
     }
   }
 

@@ -25,6 +25,7 @@ static IMAGE_TAGS: OnceLock<Mutex<HashMap<String, HashMap<String, Vec<String>>>>
 const TAG_FILE_NAME: &str = "IMAGE_TAGS";
 const TAG_TEMP_FILE_NAME: &str = "IMAGE_TAGS_TEMP";
 
+// メイン画面への画像ファイルのドロップを処理するTauriコマンド
 // NOTE: Windows でのマルチウィンドウの問題対処のためasync関数として定義
 // https://qiita.com/kemoshumai/items/f0bfff31684a157ab9f3
 // 上記記事は2.0Beta版だが正式版にもKnown Issueとして記載されている

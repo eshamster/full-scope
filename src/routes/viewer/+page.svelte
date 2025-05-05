@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+  import { convertFileSrc } from "@tauri-apps/api/core";
+  import { getPrevImagePaths } from "@/lib/api/files";
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount, onDestroy } from "svelte";
@@ -10,7 +11,7 @@
   import { ToastController } from "@/routes/viewer/toast-controller.svelte";
   import { ViewerController } from "@/routes/viewer/viewer-controller.svelte";
   import { Controler } from "@/routes/viewer/controller";
-  import ConfirmDialog from "@/routes/viewer/ConfirmDialog.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
   import CornerToast from "@/routes/viewer/CornerToast.svelte";
 
   getCurrentWindow().setFullscreen(true);
@@ -122,7 +123,7 @@
 
     // 初回はlistenが間に合わないので、明示的にリクエストを送る
     // ※万が一重複した場合は ImageInfoManager 側で排除
-    const resp = await invoke<ImagePathsResp>("get_prev_image_paths", {});
+    const resp = await getPrevImagePaths();
     handleImagePaths(resp);
 
     document.addEventListener("keydown", (event) => {

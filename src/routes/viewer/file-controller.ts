@@ -1,8 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
+import { deleteFile } from '@/lib/api/files';
 
 export class FileController {
   public async deleteFile(path: string): Promise<void> {
-    const result = await invoke('delete_file', { path });
+    const result = await deleteFile(path);
     console.log(result);
   }
 }
