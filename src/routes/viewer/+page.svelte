@@ -236,6 +236,7 @@
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+    object-position: center;
   }
 
   #debug {
@@ -245,13 +246,6 @@
     color: black;
     background-color: rgba(255, 255, 255, 0.5);
     padding: 0.2em;
-  }
-
-  #image {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: center;
   }
 
   #page {
