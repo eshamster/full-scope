@@ -3,15 +3,15 @@
   import { listen } from "@tauri-apps/api/event";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount, onDestroy } from "svelte";
-  import { ImageInfo } from "./image-info";
-  import { ImageInfoManager } from "./image-info-manager.svelte";
-  import { DialogController } from "./dialog-controller.svelte";
-  import { FileController } from "./file-controller";
-  import { ToastController } from "./toast-controller.svelte";
-  import { ViewerController } from "./viewer-controller.svelte";
-  import { Controler } from "./controller";
-  import ConfirmDialog from "./ConfirmDialog.svelte";
-  import CornerToast from "./CornerToast.svelte";
+  import { ImageInfo } from "@/routes/viewer/image-info";
+  import { ImageInfoManager } from "@/routes/viewer/image-info-manager.svelte";
+  import { DialogController } from "@/routes/viewer/dialog-controller.svelte";
+  import { FileController } from "@/routes/viewer/file-controller";
+  import { ToastController } from "@/routes/viewer/toast-controller.svelte";
+  import { ViewerController } from "@/routes/viewer/viewer-controller.svelte";
+  import { Controler } from "@/routes/viewer/controller";
+  import ConfirmDialog from "@/routes/viewer/ConfirmDialog.svelte";
+  import CornerToast from "@/routes/viewer/CornerToast.svelte";
 
   getCurrentWindow().setFullscreen(true);
 
