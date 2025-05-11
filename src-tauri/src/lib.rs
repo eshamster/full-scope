@@ -153,19 +153,23 @@ pub fn run() {
 #[tauri::command]
 fn load_tags_in_dir(
     dir_path: String,
-) -> Result<HashMap<String, HashMap<String, Vec<String>>>, String> {
-    let mut tags = IMAGE_TAGS
+) -> Result<HashMap<String, Vec<String>>, String> {
+    let mut tags_map = IMAGE_TAGS
         .get()
         .expect("failed to get IMAGE_TAGS_MUTEX")
         .lock()
         .expect("failed to lock IMAGE_TAGS_MUTEX");
 
-    if tags.is_empty() {
+    if !tags_map.contains_key(&dir_path) {
         let tag_map = parse_tags_file(&dir_path)?;
-        tags.insert(dir_path, tag_map);
+        tags_map.insert(dir_path.clone(), tag_map);
     }
 
-    Ok(tags.clone())
+    let result = tags_map
+        .get(&dir_path)
+        .cloned()
+        .unwrap_or_default();
+    Ok(result)
 }
 
 // 指定されたディレクトリのタグ情報を読み取って HashMap<String, Vec<String>> を返す

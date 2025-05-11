@@ -8,11 +8,11 @@ import { invoke } from "@tauri-apps/api/core";
  * 指定されたディレクトリのタグ情報をロードします
  *
  * @param dirPath ディレクトリのパス
- * @returns キーがディレクトリパス、バリューがファイル名 -> タグ配列 のマップ
+ * @returns ファイル名 -> タグ配列 のマップ
  */
 export async function loadTagsInDir(
   dirPath: string
-): Promise<Record<string, Record<string, string[]>>> {
+): Promise<Record<string, string[]>> {
   return invoke("load_tags_in_dir", { dir_path: dirPath });
 }
 
