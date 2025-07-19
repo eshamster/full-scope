@@ -2,6 +2,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount, onDestroy } from "svelte";
+  import type { DragDropEvent } from "@tauri-apps/api/webview";
 
   async function handleDrop(event: DragDropEvent) {
     const inputPaths = event.payload.paths;
@@ -14,7 +15,7 @@
     }
   }
 
-  let unlisten;
+  let unlisten: (() => void) | undefined;
   onMount(() => {
     // NOTE: window全体でのlistenなので特定のelementに絞りたい場合は下記参照
     // https://github.com/tauri-apps/tauri/discussions/4736#discussioncomment-8384945

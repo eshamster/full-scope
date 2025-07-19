@@ -33,12 +33,12 @@
     viewerController,
   );
 
-  let currentImages = $derived<ImageInfo[]>(() => {
-    return manager.getCurrentList(
+  let currentImages = $derived<ImageInfo[]>(
+    manager.getCurrentList(
       viewerController.getRows() *
       viewerController.getCols(),
-    );
-  });
+    )
+  );
 
   // コアプロセスから画像のパスを受け取ったときの処理
   function handleImagePaths(resp: ImagePathsResp) {
@@ -114,7 +114,7 @@
     controller.resetModifierKeys();
   }
 
-  let unlisten;
+  let unlisten: (() => void) | undefined;
   onMount(async () => {
     unlisten = listen<ImagePathsResp>("new-images", (event) => {
       handleImagePaths(event.payload);
@@ -122,7 +122,7 @@
 
     // 初回はlistenが間に合わないので、明示的にリクエストを送る
     // ※万が一重複した場合は ImageInfoManager 側で排除
-    const resp = await invoke("get_prev_image_paths", {});
+    const resp = await invoke<ImagePathsResp>("get_prev_image_paths", {});
     handleImagePaths(resp);
 
     document.addEventListener("keydown", (event) => {
@@ -171,7 +171,7 @@
              grid-template-columns: repeat({viewerController.getCols()}, 1fr);
              "
     >
-      {#each currentImages() as img}
+      {#each currentImages as img}
         <div class="cell">
           <img id="image" src={convertFileSrc(img.path)} alt={img.path} />
         </div>

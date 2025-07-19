@@ -33,7 +33,7 @@ export class ImageInfoManager {
     }
     return this.list[this.caret];
   }
-  public getCurrentList(count: number): ImageInfo {
+  public getCurrentList(count: number): ImageInfo[] {
     if (this.list.length === 0) {
       throw new Error('No images');
     }

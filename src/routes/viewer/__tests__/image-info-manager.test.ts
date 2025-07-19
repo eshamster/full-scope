@@ -274,8 +274,8 @@ describe('ImageInfoManager', () => {
       
       const result = manager.getCurrentList(2);
       expect(result).toHaveLength(2);
-      expect(result[0].path).toBe('/path/to/image1.jpg');
-      expect(result[1].path).toBe('/path/to/image2.png');
+      expect(result[0]!.path).toBe('/path/to/image1.jpg');
+      expect(result[1]!.path).toBe('/path/to/image2.png');
     });
 
     it('should handle getCurrentList when count exceeds available images', async () => {
@@ -284,7 +284,7 @@ describe('ImageInfoManager', () => {
       
       const result = manager.getCurrentList(5);
       expect(result).toHaveLength(1); // Only one image from current position
-      expect(result[0].path).toBe('/path/to/image3.gif');
+      expect(result[0]!.path).toBe('/path/to/image3.gif');
     });
 
     it('should handle getCurrentList with empty list', () => {
