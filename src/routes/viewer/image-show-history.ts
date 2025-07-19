@@ -25,7 +25,7 @@ export class ImageShowHistory {
     if (this.history.length > maxHistory) {
       this.history = this.history.slice(1);
     }
-    this.current++;
+    this.current = this.history.length;
   }
 
   public gotoPrevPath(): string | null {

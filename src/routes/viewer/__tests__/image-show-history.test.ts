@@ -28,15 +28,16 @@ describe('ImageShowHistory', () => {
     it('should clear forward history when adding new entry', () => {
       history.add('/path/to/image1.jpg', '/path/to/image2.jpg');
       history.add('/path/to/image2.jpg', '/path/to/image3.jpg');
+      history.add('/path/to/image3.jpg', '/path/to/image4.jpg');
       
-      // Go back one step
+      // Go back two steps
+      history.gotoPrevPath();
       history.gotoPrevPath();
       
       // Add new entry should clear forward history
-      history.add('/path/to/image1.jpg', '/path/to/image4.jpg');
+      history.add('/path/to/image2.jpg', '/path/to/image5.jpg');
       
-      // Forward navigation should work with new entry
-      expect(history.gotoNextPath()).toBe('/path/to/image4.jpg');
+      // After add, we're at the end, so gotoNextPath should return null
       expect(history.gotoNextPath()).toBeNull();
     });
   });
@@ -145,8 +146,7 @@ describe('ImageShowHistory', () => {
       // Add new entry, should clear forward history
       history.add('/path/to/image3.jpg', '/path/to/image5.jpg');
       
-      // Should be able to navigate to new entry
-      expect(history.gotoNextPath()).toBe('/path/to/image5.jpg');
+      // After add, we're at the end, so gotoNextPath should return null
       expect(history.gotoNextPath()).toBeNull();
       
       // Previous history should still be accessible
