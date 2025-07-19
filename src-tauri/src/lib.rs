@@ -129,3 +129,113 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_image_files_with_valid_extensions() {
+        let paths = vec![
+            "test.jpg".to_string(),
+            "test.png".to_string(),
+            "test.gif".to_string(),
+            "test.webp".to_string(),
+            "test.jpeg".to_string(),
+        ];
+
+        let result = extract_image_files(paths.clone());
+        
+        assert_eq!(result.len(), 5);
+        assert_eq!(result, paths);
+    }
+
+    #[test]
+    fn test_extract_image_files_with_invalid_extensions() {
+        let paths = vec![
+            "test.txt".to_string(),
+            "test.pdf".to_string(),
+            "test.mp4".to_string(),
+            "test".to_string(),
+        ];
+
+        let result = extract_image_files(paths);
+        
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_extract_image_files_mixed_extensions() {
+        let paths = vec![
+            "image1.jpg".to_string(),
+            "document.txt".to_string(),
+            "image2.png".to_string(),
+            "video.mp4".to_string(),
+            "image3.gif".to_string(),
+        ];
+
+        let result = extract_image_files(paths);
+        
+        assert_eq!(result.len(), 3);
+        assert!(result.contains(&"image1.jpg".to_string()));
+        assert!(result.contains(&"image2.png".to_string()));
+        assert!(result.contains(&"image3.gif".to_string()));
+    }
+
+    #[test]
+    fn test_extract_image_files_case_sensitivity() {
+        // TODO: 大文字拡張子のサポートを実装後、このテストを更新
+        // 現在は大文字拡張子をサポートしていないため、期待値は0
+        let paths = vec![
+            "test.JPG".to_string(),
+            "test.PNG".to_string(),
+            "test.GIF".to_string(),
+        ];
+
+        let result = extract_image_files(paths);
+        
+        // 現在は大文字拡張子未サポート（TODO: dev_doc/TODO.md 参照）
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_extract_image_files_empty_input() {
+        let paths = vec![];
+
+        let result = extract_image_files(paths);
+        
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_extract_image_files_with_nonexistent_directory() {
+        let paths = vec![
+            "nonexistent_directory".to_string(),
+            "image.jpg".to_string(),
+        ];
+
+        let result = extract_image_files(paths);
+        
+        // 存在しないディレクトリはスキップされ、有効な画像ファイルのみ残る
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], "image.jpg");
+    }
+
+    #[test]
+    fn test_is_image_helper_function() {
+        let is_image = |path: &str| -> bool { 
+            let image_exts = vec!["png", "jpeg", "jpg", "gif", "webp"];
+            image_exts.iter().any(|ext| path.ends_with(ext)) 
+        };
+
+        assert!(is_image("test.jpg"));
+        assert!(is_image("test.png"));
+        assert!(is_image("test.gif"));
+        assert!(is_image("test.webp"));
+        assert!(is_image("test.jpeg"));
+        assert!(!is_image("test.txt"));
+        assert!(!is_image("test"));
+        // TODO: 大文字拡張子サポート後はtrueになる予定
+        assert!(!is_image("test.JPG"));
+    }
+}
