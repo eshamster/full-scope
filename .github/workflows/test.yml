@@ -1,0 +1,95 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+          
+      - name: Install dependencies
+        run: pnpm install
+        
+      - name: Run type checking
+        run: npm run check
+        
+      - name: Run frontend tests
+        run: npm run test
+        
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          
+      - name: Run backend tests
+        working-directory: src-tauri
+        run: cargo test
+        
+      - name: Check code formatting
+        working-directory: src-tauri
+        run: cargo fmt --check
+        
+      - name: Run clippy lints
+        working-directory: src-tauri
+        run: cargo clippy -- -D warnings
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [frontend-tests, backend-tests]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+          
+      - name: Install dependencies
+        run: pnpm install
+        
+      - name: Build application
+        run: npm run build
