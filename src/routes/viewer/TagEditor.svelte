@@ -14,6 +14,7 @@
   let tagsText = $state('');
   let textAreaElement: HTMLTextAreaElement;
   let ignoreNextInput = $state(false);
+  let validationError = $state<string | null>(null);
 
   // タグ配列をカンマ区切り文字列に変換
   $effect(() => {
@@ -49,12 +50,63 @@
     }
   }
 
+  // タグの入力値検証
+  function validateTags(tags: string[]): string | null {
+    // タグ数制限
+    if (tags.length > 50) {
+      return 'タグの数が多すぎます（最大50個）';
+    }
+
+    for (const tag of tags) {
+      if (tag.length === 0) continue;
+
+      // 長さ制限
+      if (tag.length > 100) {
+        return `タグが長すぎます（最大100文字）: "${tag.substring(0, 20)}..."`;
+      }
+
+      // 禁止文字チェック
+      if (tag.includes('\t') || tag.includes('\n') || tag.includes('\r')) {
+        return `タグに禁止文字が含まれています: "${tag}"`;
+      }
+
+      // 制御文字チェック
+      if (/[\x00-\x1f\x7f]/.test(tag)) {
+        return `タグに制御文字が含まれています: "${tag}"`;
+      }
+    }
+
+    return null;
+  }
+
+  // リアルタイムバリデーション
+  $effect(() => {
+    if (!show || tagsText.length === 0) {
+      validationError = null;
+      return;
+    }
+
+    const tags = tagsText
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0);
+    
+    validationError = validateTags(tags);
+  });
+
   function handleSave() {
     // カンマ区切りテキストをタグ配列に変換（空文字除去、トリム）
     const tags = tagsText
       .split(',')
       .map(tag => tag.trim())
       .filter(tag => tag.length > 0);
+    
+    // 保存前の最終検証
+    const error = validateTags(tags);
+    if (error) {
+      validationError = error;
+      return;
+    }
     
     onSave(tags);
   }
@@ -116,9 +168,21 @@
         placeholder="タグをカンマ区切りで入力してください"
         rows="4"
         cols="50"
+        class:error={validationError}
       ></textarea>
+      {#if validationError}
+        <div class="validation-error">
+          {validationError}
+        </div>
+      {/if}
       <div class="button-group">
-        <button on:click={handleSave} class="save-button">保存 (Enter)</button>
+        <button 
+          on:click={handleSave} 
+          class="save-button"
+          disabled={validationError !== null}
+        >
+          保存 (Enter)
+        </button>
         <button on:click={handleCancel} class="cancel-button">キャンセル (Escape)</button>
       </div>
     </div>
@@ -162,12 +226,29 @@
 
   textarea {
     width: 100%;
-    margin-bottom: 1em;
+    margin-bottom: 0.5em;
     padding: 0.5em;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-family: inherit;
     resize: vertical;
+    transition: border-color 0.2s;
+  }
+
+  textarea.error {
+    border-color: #dc3545;
+    box-shadow: 0 0 4px rgba(220, 53, 69, 0.3);
+  }
+
+  .validation-error {
+    color: #dc3545;
+    font-size: 0.85em;
+    margin-bottom: 1em;
+    padding: 0.5em;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    word-break: break-word;
   }
 
   .button-group {
@@ -189,8 +270,14 @@
     color: white;
   }
 
-  .save-button:hover {
+  .save-button:hover:not(:disabled) {
     background-color: #0056b3;
+  }
+
+  .save-button:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
   }
 
   .cancel-button {

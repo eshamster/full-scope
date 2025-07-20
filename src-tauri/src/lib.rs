@@ -156,18 +156,24 @@ pub fn run() {
 // 指定されたディレクトリのタグ情報をロード・返却するTauriコマンド
 #[tauri::command]
 fn load_tags_in_dir(dir_path: String) -> Result<HashMap<String, Vec<String>>, String> {
+    // パス検証: パストラバーサル攻撃を防ぐ
+    let validated_dir_path = validate_directory_path(&dir_path)?;
+
     let mut tags_map = IMAGE_TAGS
         .get()
         .expect("failed to get IMAGE_TAGS_MUTEX")
         .lock()
         .expect("failed to lock IMAGE_TAGS_MUTEX");
 
-    if !tags_map.contains_key(&dir_path) {
-        let tag_map = parse_tags_file(&dir_path)?;
-        tags_map.insert(dir_path.clone(), tag_map);
+    if !tags_map.contains_key(&validated_dir_path) {
+        let tag_map = parse_tags_file(&validated_dir_path)?;
+        tags_map.insert(validated_dir_path.clone(), tag_map);
     }
 
-    let result = tags_map.get(&dir_path).cloned().unwrap_or_default();
+    let result = tags_map
+        .get(&validated_dir_path)
+        .cloned()
+        .unwrap_or_default();
     Ok(result)
 }
 
@@ -207,6 +213,111 @@ fn parse_tag_line(line: &str) -> (String, Vec<String>) {
     (file_name, tags)
 }
 
+// セキュリティ: タグの入力値検証
+fn validate_tag(tag: &str) -> Result<(), String> {
+    // 空のタグは許可
+    if tag.is_empty() {
+        return Ok(());
+    }
+
+    // 長さ制限: 最大100文字
+    if tag.len() > 100 {
+        return Err("Tag too long (maximum 100 characters)".to_string());
+    }
+
+    // 禁止文字チェック: タブ文字、改行文字、制御文字
+    if tag.contains('\t') || tag.contains('\n') || tag.contains('\r') {
+        return Err("Tag contains invalid characters (tab, newline)".to_string());
+    }
+
+    // 制御文字チェック
+    if tag.chars().any(|c| c.is_control()) {
+        return Err("Tag contains control characters".to_string());
+    }
+
+    Ok(())
+}
+
+// セキュリティ: パストラバーサル攻撃防止のためのパス検証
+fn validate_and_parse_image_path(img_path: &str) -> Result<(String, String), String> {
+    let path = Path::new(img_path);
+
+    // ファイルの存在確認
+    if !path.exists() {
+        return Err(format!("{} does not exist", img_path));
+    }
+
+    if !path.is_file() {
+        return Err(format!("{} is not a file", img_path));
+    }
+
+    // パスの正規化（シンボリックリンクを解決し、. や .. を処理）
+    let canonical_path = path
+        .canonicalize()
+        .map_err(|e| format!("Failed to canonicalize path {}: {}", img_path, e))?;
+
+    // ディレクトリとファイル名を取得
+    let dir_path = canonical_path
+        .parent()
+        .ok_or_else(|| "Failed to get parent directory".to_string())?
+        .to_str()
+        .ok_or_else(|| "Failed to convert directory path to string".to_string())?
+        .to_string();
+
+    let file_name = canonical_path
+        .file_name()
+        .ok_or_else(|| "Failed to get file name".to_string())?
+        .to_str()
+        .ok_or_else(|| "Failed to convert file name to string".to_string())?
+        .to_string();
+
+    // ファイル名の検証: 相対パス成分がないかチェック
+    if file_name.contains("..") || file_name.contains("/") || file_name.contains("\\") {
+        return Err("Invalid file name".to_string());
+    }
+
+    // 画像ファイル拡張子の検証
+    let image_exts = ["png", "jpeg", "jpg", "gif", "webp"];
+    let path_str = canonical_path
+        .to_str()
+        .ok_or_else(|| "Failed to convert path to string".to_string())?;
+
+    if !image_exts
+        .iter()
+        .any(|ext| path_str.to_lowercase().ends_with(ext))
+    {
+        return Err("File is not a supported image format".to_string());
+    }
+
+    Ok((dir_path, file_name))
+}
+
+// セキュリティ: ディレクトリパスの検証
+fn validate_directory_path(dir_path: &str) -> Result<String, String> {
+    let path = Path::new(dir_path);
+
+    // ディレクトリの存在確認
+    if !path.exists() {
+        return Err(format!("{} does not exist", dir_path));
+    }
+
+    if !path.is_dir() {
+        return Err(format!("{} is not a directory", dir_path));
+    }
+
+    // パスの正規化（シンボリックリンクを解決し、. や .. を処理）
+    let canonical_path = path
+        .canonicalize()
+        .map_err(|e| format!("Failed to canonicalize directory path {}: {}", dir_path, e))?;
+
+    let validated_path = canonical_path
+        .to_str()
+        .ok_or_else(|| "Failed to convert directory path to string".to_string())?
+        .to_string();
+
+    Ok(validated_path)
+}
+
 // 指定されたディレクトリのタグファイル名と一時ファイル名を取得する
 fn get_tag_file_names(dir_path: String) -> Result<(String, String), String> {
     let dir = Path::new(&dir_path);
@@ -225,23 +336,15 @@ fn get_tag_file_names(dir_path: String) -> Result<(String, String), String> {
 // 指定された画像ファイル（フルパス）のタグ情報を保存するtauriコマンド
 #[tauri::command]
 fn save_tags(img_path: String, tags: Vec<String>) -> Result<(), String> {
-    // ディレクトリパスとファイル名を分離する
-    let path = Path::new(&img_path);
-    if !path.is_file() {
-        return Err(format!("{} is not exist or not a file", img_path));
+    // 入力値検証: タグの検証
+    for tag in &tags {
+        if let Err(err) = validate_tag(tag) {
+            return Err(err);
+        }
     }
-    let dir_path = path
-        .parent()
-        .expect("failed to get parent directory")
-        .to_str()
-        .expect("failed to convert path to str")
-        .to_string();
-    let file_name = path
-        .file_name()
-        .expect("failed to get file name")
-        .to_str()
-        .expect("failed to convert path to str")
-        .to_string();
+
+    // パス検証: パストラバーサル攻撃を防ぐ
+    let (dir_path, file_name) = validate_and_parse_image_path(&img_path)?;
 
     let (tag_file_name, tag_backup_file_name) =
         get_tag_file_names(dir_path.to_string()).expect("failed to get tag file names");
@@ -553,7 +656,7 @@ mod tests {
             let result = save_tags(img_path, tags);
 
             assert!(result.is_err());
-            assert!(result.unwrap_err().contains("is not exist or not a file"));
+            assert!(result.unwrap_err().contains("does not exist"));
         }
 
         #[test]
@@ -587,6 +690,87 @@ mod tests {
             assert!(result2.is_ok());
             // キャッシュされた値が返される
             assert_eq!(result2.unwrap()["image1.jpg"], vec!["tag1"]);
+        }
+
+        // セキュリティテスト: タグバリデーション
+        #[test]
+        fn test_validate_tag_security() {
+            // 正常なタグ
+            assert!(validate_tag("normal_tag").is_ok());
+            assert!(validate_tag("日本語タグ").is_ok());
+            assert!(validate_tag("").is_ok()); // 空タグは許可
+
+            // 長すぎるタグ
+            let long_tag = "a".repeat(101);
+            assert!(validate_tag(&long_tag).is_err());
+
+            // 禁止文字: タブ
+            assert!(validate_tag("tag\twith\ttab").is_err());
+
+            // 禁止文字: 改行
+            assert!(validate_tag("tag\nwith\nnewline").is_err());
+
+            // 制御文字
+            assert!(validate_tag("tag\x00with\x01control").is_err());
+        }
+
+        #[test]
+        fn test_save_tags_validation_security() {
+            let temp_dir = setup_test_dir();
+            let test_file = temp_dir.path().join("test.jpg");
+            
+            // テスト用の画像ファイルを作成
+            fs::write(&test_file, "fake image content").expect("Failed to create test file");
+            
+            let img_path = test_file.to_str().unwrap().to_string();
+            
+            // IMAGE_TAGSを初期化
+            if IMAGE_TAGS.get().is_none() {
+                IMAGE_TAGS
+                    .set(Mutex::new(HashMap::new()))
+                    .expect("Failed to set IMAGE_TAGS");
+            }
+
+            // 無効なタグで保存試行: 長すぎるタグ
+            let long_tag = "a".repeat(101);
+            let result = save_tags(img_path.clone(), vec![long_tag]);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("Tag too long"));
+
+            // 無効なタグで保存試行: タブ文字
+            let result = save_tags(img_path.clone(), vec!["tag\twith\ttab".to_string()]);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("invalid characters"));
+
+            // 無効なタグで保存試行: 制御文字
+            let result = save_tags(img_path, vec!["tag\x00control".to_string()]);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("control characters"));
+        }
+
+        #[test]
+        fn test_path_validation_security() {
+            let temp_dir = setup_test_dir();
+            
+            // IMAGE_TAGSを初期化
+            if IMAGE_TAGS.get().is_none() {
+                IMAGE_TAGS
+                    .set(Mutex::new(HashMap::new()))
+                    .expect("Failed to set IMAGE_TAGS");
+            }
+
+            // 存在しないディレクトリ
+            let result = load_tags_in_dir("/nonexistent/directory".to_string());
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("does not exist"));
+
+            // ファイルをディレクトリとして指定
+            let test_file = temp_dir.path().join("test.txt");
+            fs::write(&test_file, "test content").expect("Failed to create test file");
+            
+            let result = load_tags_in_dir(test_file.to_str().unwrap().to_string());
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("is not a directory"));
         }
 
         #[test]
