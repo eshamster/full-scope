@@ -2,11 +2,14 @@
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { onMount, onDestroy } from "svelte";
+  import type { Event } from "@tauri-apps/api/event";
   import type { DragDropEvent } from "@tauri-apps/api/webview";
 
-  async function handleDrop(event: DragDropEvent) {
-    const inputPaths = event.payload.paths;
-    await invoke("drop", { paths: inputPaths });
+  async function handleDrop(event: Event<DragDropEvent>) {
+    if (event.payload.type === 'drop') {
+      const inputPaths = event.payload.paths;
+      await invoke("drop", { paths: inputPaths });
+    }
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -16,18 +19,18 @@
   }
 
   let unlisten: (() => void) | undefined;
-  onMount(() => {
+  onMount(async () => {
     // NOTE: window全体でのlistenなので特定のelementに絞りたい場合は下記参照
     // https://github.com/tauri-apps/tauri/discussions/4736#discussioncomment-8384945
-    unlisten = getCurrentWindow().onDragDropEvent(async (event) => {
+    unlisten = await getCurrentWindow().onDragDropEvent(async (event) => {
       if (event.payload.type === 'drop') {
         handleDrop(event);
       }
+    });
 
-      document.addEventListener("keydown", (event) => {
-        handleKeydown(event);
-      });
-    })
+    document.addEventListener("keydown", (event) => {
+      handleKeydown(event);
+    });
   });
   onDestroy(() => {
     if (unlisten && typeof unlisten === "function") {

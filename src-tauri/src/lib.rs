@@ -1,6 +1,5 @@
 use std::sync::{Mutex, OnceLock};
 use tauri::{Emitter, Manager};
-use trash;
 
 const VIEWER_LABEL: &str = "viewer";
 const VIEWER_PAGE: &str = "viewer";
@@ -55,7 +54,7 @@ async fn drop(app: tauri::AppHandle, paths: Vec<String>) -> Result<(), String> {
 // ただし、フォルダの場合は一階層だけ中身を見て画像ファイルを抽出する
 fn extract_image_files(paths: Vec<String>) -> Vec<String> {
     let mut image_files = Vec::new();
-    let image_exts = vec!["png", "jpeg", "jpg", "gif", "webp"];
+    let image_exts = ["png", "jpeg", "jpg", "gif", "webp"];
 
     let is_image = |path: &str| -> bool { image_exts.iter().any(|ext| path.ends_with(ext)) };
 
@@ -71,7 +70,7 @@ fn extract_image_files(paths: Vec<String>) -> Vec<String> {
             for entry in dir.unwrap() {
                 let entry = entry.unwrap();
                 let path = entry.path();
-                if path.is_file() && is_image(&path.to_str().unwrap()) {
+                if path.is_file() && is_image(path.to_str().unwrap()) {
                     image_files.push(path.to_str().unwrap().to_string());
                 }
             }
@@ -145,7 +144,7 @@ mod tests {
         ];
 
         let result = extract_image_files(paths.clone());
-        
+
         assert_eq!(result.len(), 5);
         assert_eq!(result, paths);
     }
@@ -160,7 +159,7 @@ mod tests {
         ];
 
         let result = extract_image_files(paths);
-        
+
         assert_eq!(result.len(), 0);
     }
 
@@ -175,7 +174,7 @@ mod tests {
         ];
 
         let result = extract_image_files(paths);
-        
+
         assert_eq!(result.len(), 3);
         assert!(result.contains(&"image1.jpg".to_string()));
         assert!(result.contains(&"image2.png".to_string()));
@@ -193,7 +192,7 @@ mod tests {
         ];
 
         let result = extract_image_files(paths);
-        
+
         // 現在は大文字拡張子未サポート（TODO: dev_doc/TODO.md 参照）
         assert_eq!(result.len(), 0);
     }
@@ -203,19 +202,16 @@ mod tests {
         let paths = vec![];
 
         let result = extract_image_files(paths);
-        
+
         assert_eq!(result.len(), 0);
     }
 
     #[test]
     fn test_extract_image_files_with_nonexistent_directory() {
-        let paths = vec![
-            "nonexistent_directory".to_string(),
-            "image.jpg".to_string(),
-        ];
+        let paths = vec!["nonexistent_directory".to_string(), "image.jpg".to_string()];
 
         let result = extract_image_files(paths);
-        
+
         // 存在しないディレクトリはスキップされ、有効な画像ファイルのみ残る
         assert_eq!(result.len(), 1);
         assert_eq!(result[0], "image.jpg");
@@ -223,9 +219,9 @@ mod tests {
 
     #[test]
     fn test_is_image_helper_function() {
-        let is_image = |path: &str| -> bool { 
-            let image_exts = vec!["png", "jpeg", "jpg", "gif", "webp"];
-            image_exts.iter().any(|ext| path.ends_with(ext)) 
+        let is_image = |path: &str| -> bool {
+            let image_exts = ["png", "jpeg", "jpg", "gif", "webp"];
+            image_exts.iter().any(|ext| path.ends_with(ext))
         };
 
         assert!(is_image("test.jpg"));

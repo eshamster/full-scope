@@ -116,7 +116,7 @@
 
   let unlisten: (() => void) | undefined;
   onMount(async () => {
-    unlisten = listen<ImagePathsResp>("new-images", (event) => {
+    unlisten = await listen<ImagePathsResp>("new-images", (event) => {
       handleImagePaths(event.payload);
     });
 
