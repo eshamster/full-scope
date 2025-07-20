@@ -13,7 +13,7 @@ import { invoke } from "@tauri-apps/api/core";
 export async function loadTagsInDir(
   dirPath: string
 ): Promise<Record<string, string[]>> {
-  return invoke("load_tags_in_dir", { dir_path: dirPath });
+  return invoke("load_tags_in_dir", { dirPath });
 }
 
 /**
@@ -26,5 +26,5 @@ export async function saveTags(
   imgPath: string,
   tags: string[]
 ): Promise<void> {
-  return invoke("save_tags", { img_path: imgPath, tags });
+  return invoke("save_tags", { imgPath, tags });
 }

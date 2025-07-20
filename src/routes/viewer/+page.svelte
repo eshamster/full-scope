@@ -13,6 +13,8 @@
   import { Controler } from "@/routes/viewer/controller";
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import CornerToast from "@/routes/viewer/CornerToast.svelte";
+  import TagEditor from "./TagEditor.svelte";
+  import { TagController } from "./tag-controller.svelte";
 
   getCurrentWindow().setFullscreen(true);
 
@@ -26,6 +28,7 @@
   const fileController = new FileController();
   const toastController = new ToastController();
   const viewerController = new ViewerController();
+  const tagController = new TagController(toastController);
   const controller = new Controler(
     manager,
     dialogController,
@@ -33,6 +36,43 @@
     toastController,
     viewerController,
   );
+
+  // タグ編集用の状態
+  let showTagEditor = $state(false);
+  let currentImageTags = $state<string[]>([]);
+
+  // タグ編集を開始する関数
+  async function startTagEdit() {
+    if (manager.getList().length === 0) return;
+    
+    const currentImage = manager.getCurrent();
+    currentImageTags = await tagController.getImageTags(currentImage.path);
+    showTagEditor = true;
+    controller.setTagEditorOpen(true);
+  }
+
+  // タグ保存の処理
+  async function handleTagSave(tags: string[]) {
+    if (manager.getList().length === 0) return;
+    
+    const currentImage = manager.getCurrent();
+    try {
+      await tagController.saveImageTags(currentImage.path, tags);
+      showTagEditor = false;
+      controller.setTagEditorOpen(false);
+    } catch (error) {
+      // エラーはtagController内でToastに表示されるのでここでは何もしない
+    }
+  }
+
+  // タグ編集をキャンセルする処理
+  function handleTagCancel() {
+    showTagEditor = false;
+    controller.setTagEditorOpen(false);
+  }
+
+  // コントローラーにタグ編集コールバックを設定
+  controller.setOnEditTags(startTagEdit);
 
   let currentImages = $derived<ImageInfo[]>(
     manager.getCurrentList(
@@ -192,6 +232,15 @@
   message={toastController.getMessage()}
 >
 </CornerToast>
+
+<TagEditor
+  show={showTagEditor}
+  imagePath={manager.getList().length > 0 ? manager.getCurrent().path : ''}
+  initialTags={currentImageTags}
+  onSave={handleTagSave}
+  onCancel={handleTagCancel}
+>
+</TagEditor>
 </main>
 
 <style>

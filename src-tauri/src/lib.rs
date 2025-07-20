@@ -22,8 +22,8 @@ static IMAGE_PATHS: OnceLock<Mutex<ImagePaths>> = OnceLock::new();
 // Directory(String) > FileName(String) > Tags(Vec<String>) のマップ
 static IMAGE_TAGS: OnceLock<Mutex<HashMap<String, HashMap<String, Vec<String>>>>> = OnceLock::new();
 
-const TAG_FILE_NAME: &str = "IMAGE_TAGS";
-const TAG_TEMP_FILE_NAME: &str = "IMAGE_TAGS_TEMP";
+const TAG_FILE_NAME: &str = "IMAGE_TAG";
+const TAG_TEMP_FILE_NAME: &str = "IMAGE_TAG_TEMP";
 
 // メイン画面への画像ファイルのドロップを処理するTauriコマンド
 // NOTE: Windows でのマルチウィンドウの問題対処のためasync関数として定義
@@ -129,6 +129,10 @@ pub fn run() {
         }))
         .expect("failed to set IMAGE_PATHS_MUTEX");
 
+    IMAGE_TAGS
+        .set(Mutex::new(HashMap::new()))
+        .expect("failed to set IMAGE_TAGS_MUTEX");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
@@ -151,9 +155,7 @@ pub fn run() {
 
 // 指定されたディレクトリのタグ情報をロード・返却するTauriコマンド
 #[tauri::command]
-fn load_tags_in_dir(
-    dir_path: String,
-) -> Result<HashMap<String, Vec<String>>, String> {
+fn load_tags_in_dir(dir_path: String) -> Result<HashMap<String, Vec<String>>, String> {
     let mut tags_map = IMAGE_TAGS
         .get()
         .expect("failed to get IMAGE_TAGS_MUTEX")
@@ -165,10 +167,7 @@ fn load_tags_in_dir(
         tags_map.insert(dir_path.clone(), tag_map);
     }
 
-    let result = tags_map
-        .get(&dir_path)
-        .cloned()
-        .unwrap_or_default();
+    let result = tags_map.get(&dir_path).cloned().unwrap_or_default();
     Ok(result)
 }
 

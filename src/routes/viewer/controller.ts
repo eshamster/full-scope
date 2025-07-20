@@ -18,7 +18,8 @@ export type Operation =
   'incrementRows' |
   'decrementRows' |
   'incrementCols' |
-  'decrementCols';
+  'decrementCols' |
+  'editTags';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -51,11 +52,14 @@ const keyConfigs: keyConfig[] = [
   { key: 'r', operation: 'decrementRows', modifierKeys: ['shift'] },
   { key: 'l', operation: 'incrementCols', modifierKeys: [] },
   { key: 'l', operation: 'decrementCols', modifierKeys: ['shift'] },
+  { key: 't', operation: 'editTags', modifierKeys: [] },
 ];
 
   export class Controler {
   private keyToOperations = new Map<string, Operation>();
   private modfierKeyMap = new Map<ModifierKey, boolean>();
+  private onEditTags?: () => void;
+  private isTagEditorOpen = false;
 
   constructor(
     private imageInfoManager: ImageInfoManager,
@@ -65,6 +69,14 @@ const keyConfigs: keyConfig[] = [
     private viewerController: ViewerController,
   ) {
     this.readKeyConfigs(keyConfigs);
+  }
+
+  public setOnEditTags(callback: () => void): void {
+    this.onEditTags = callback;
+  }
+
+  public setTagEditorOpen(isOpen: boolean): void {
+    this.isTagEditorOpen = isOpen;
   }
 
   private readKeyConfigs(configs: keyConfig[]): void {
@@ -93,7 +105,7 @@ const keyConfigs: keyConfig[] = [
   }
 
   private operate(operation: Operation): void {
-    if (this.dialogController.isShow()) {
+    if (this.dialogController.isShow() || this.isTagEditorOpen) {
       return;
     }
 
@@ -154,6 +166,11 @@ const keyConfigs: keyConfig[] = [
         break;
       case 'decrementCols':
         this.viewerController.decrementCols();
+        break;
+      case 'editTags':
+        if (this.onEditTags) {
+          this.onEditTags();
+        }
         break;
     }
   }
