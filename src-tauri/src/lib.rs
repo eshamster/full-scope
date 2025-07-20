@@ -1,4 +1,7 @@
-use std::sync::{Mutex, OnceLock};
+use std::collections::HashMap;
+use std::io::{BufRead, Write};
+use std::path::Path;
+use std::sync::{Mutex, MutexGuard, OnceLock};
 use tauri::{Emitter, Manager};
 
 const VIEWER_LABEL: &str = "viewer";
@@ -13,7 +16,14 @@ struct ImagePaths {
 }
 
 // 直近返したIDと画像ファイルのパスを保持する
-static IMAGE_PATHS_MUTEX: OnceLock<Mutex<ImagePaths>> = OnceLock::new();
+static IMAGE_PATHS: OnceLock<Mutex<ImagePaths>> = OnceLock::new();
+
+// 画像のタグ情報をメモリに保持する
+// Directory(String) > FileName(String) > Tags(Vec<String>) のマップ
+static IMAGE_TAGS: OnceLock<Mutex<HashMap<String, HashMap<String, Vec<String>>>>> = OnceLock::new();
+
+const TAG_FILE_NAME: &str = "IMAGE_TAGS";
+const TAG_TEMP_FILE_NAME: &str = "IMAGE_TAGS_TEMP";
 
 // NOTE: Windows でのマルチウィンドウの問題対処のためasync関数として定義
 // https://qiita.com/kemoshumai/items/f0bfff31684a157ab9f3
@@ -37,7 +47,7 @@ async fn drop(app: tauri::AppHandle, paths: Vec<String>) -> Result<(), String> {
     let image_files = extract_image_files(paths);
 
     // Mutexでロックを取りつつIMAGE_PATHSを更新
-    let mut image_paths = IMAGE_PATHS_MUTEX
+    let mut image_paths = IMAGE_PATHS
         .get()
         .expect("failed to get IMAGE_PATHS_MUTEX")
         .lock()
@@ -84,7 +94,7 @@ fn extract_image_files(paths: Vec<String>) -> Vec<String> {
 // 新規ウィンドウ側から再取得するために利用する
 #[tauri::command]
 fn get_prev_image_paths() -> ImagePaths {
-    IMAGE_PATHS_MUTEX
+    IMAGE_PATHS
         .get()
         .expect("failed to get IMAGE_PATHS_MUTEX")
         .lock()
@@ -111,7 +121,7 @@ fn delete_file(path: String) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    IMAGE_PATHS_MUTEX
+    IMAGE_PATHS
         .set(Mutex::new(ImagePaths {
             id: 0,
             paths: Vec::new(),
@@ -123,10 +133,146 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             drop,
             get_prev_image_paths,
-            delete_file
+            delete_file,
+            load_tags_in_dir,
+            save_tags,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+// --- タグ関連 --- //
+
+// NOTE: 既知の問題
+// 複数のウィンドウで同じディレクトリを開いている場合、
+// タグファイルのロックや（最初に読み込んだ後の）同期はしていないので
+// 後からタグを更新した方の情報で上書きされてしまう
+
+// 指定されたディレクトリのタグ情報をロード・返却するTauriコマンド
+#[tauri::command]
+fn load_tags_in_dir(
+    dir_path: String,
+) -> Result<HashMap<String, HashMap<String, Vec<String>>>, String> {
+    let mut tags = IMAGE_TAGS
+        .get()
+        .expect("failed to get IMAGE_TAGS_MUTEX")
+        .lock()
+        .expect("failed to lock IMAGE_TAGS_MUTEX");
+
+    if tags.is_empty() {
+        let tag_map = parse_tags_file(&dir_path)?;
+        tags.insert(dir_path, tag_map);
+    }
+
+    Ok(tags.clone())
+}
+
+// 指定されたディレクトリのタグ情報を読み取って HashMap<String, Vec<String>> を返す
+fn parse_tags_file(dir_path: &str) -> Result<HashMap<String, Vec<String>>, String> {
+    let (tag_file_name, _) =
+        get_tag_file_names(dir_path.to_string()).expect("failed to get tag file names");
+
+    if !std::path::Path::new(&tag_file_name).exists() {
+        return Ok(HashMap::new());
+    }
+
+    let file = std::fs::File::open(tag_file_name.clone())
+        .expect(format!("failed to open tag file: {}", tag_file_name.clone()).as_str());
+    let reader = std::io::BufReader::new(file);
+    let mut result = HashMap::new();
+    for line in reader.lines() {
+        let line = line.expect("failed to read line");
+        let (file_name, tags) = parse_tag_line(&line);
+        result.insert(file_name, tags);
+    }
+
+    Ok(result)
+}
+
+// タグファイルの一行分の文字列をパースしてファイル名とタグのペアを返す
+// 行の形式は: "file_name\ttag1,tag2,tag3"
+fn parse_tag_line(line: &str) -> (String, Vec<String>) {
+    let mut parts = line.split('\t');
+    let file_name = parts.next().unwrap_or("").to_string();
+    let tags = parts
+        .next()
+        .unwrap_or("")
+        .split(',')
+        .map(|s| s.to_string())
+        .collect();
+    (file_name, tags)
+}
+
+// 指定されたディレクトリのタグファイル名と一時ファイル名を取得する
+fn get_tag_file_names(dir_path: String) -> Result<(String, String), String> {
+    let dir = Path::new(&dir_path);
+    if dir.is_dir() {
+        let tag_file_name = dir.join(TAG_FILE_NAME);
+        let tag_backup_file_name = dir.join(TAG_TEMP_FILE_NAME);
+        Ok((
+            tag_file_name.to_str().unwrap().to_string(),
+            tag_backup_file_name.to_str().unwrap().to_string(),
+        ))
+    } else {
+        Err(format!("{} is not exist or not a directory", dir_path))
+    }
+}
+
+// 指定された画像ファイル（フルパス）のタグ情報を保存するtauriコマンド
+#[tauri::command]
+fn save_tags(img_path: String, tags: Vec<String>) -> Result<(), String> {
+    // ディレクトリパスとファイル名を分離する
+    let path = Path::new(&img_path);
+    if !path.is_file() {
+        return Err(format!("{} is not exist or not a file", img_path));
+    }
+    let dir_path = path
+        .parent()
+        .expect("failed to get parent directory")
+        .to_str()
+        .expect("failed to convert path to str")
+        .to_string();
+    let file_name = path
+        .file_name()
+        .expect("failed to get file name")
+        .to_str()
+        .expect("failed to convert path to str")
+        .to_string();
+
+    let (tag_file_name, tag_backup_file_name) =
+        get_tag_file_names(dir_path.to_string()).expect("failed to get tag file names");
+
+    // タグ情報をIMAGE_TAGSに保存する
+    let mut tags_map = must_lock_image_tags();
+    tags_map
+        .entry(dir_path.clone())
+        .or_insert_with(HashMap::new)
+        .insert(file_name.clone(), tags.clone());
+
+    // 一時ファイルに書き込む
+    let mut temp_file =
+        std::fs::File::create(tag_backup_file_name.clone()).expect("failed to create temp file");
+    for (file_name, tags) in tags_map.get(&dir_path).unwrap() {
+        let tags_str = tags.join(",");
+        let line = format!("{}\t{}\n", file_name, tags_str);
+        temp_file
+            .write_all(line.as_bytes())
+            .expect("failed to write to temp file");
+    }
+
+    // 一時ファイルをリネーム
+    std::fs::rename(tag_backup_file_name.clone(), tag_file_name.clone())
+        .expect("failed to rename temp file");
+
+    Ok(())
+}
+
+fn must_lock_image_tags<'a>() -> MutexGuard<'a, HashMap<String, HashMap<String, Vec<String>>>> {
+    IMAGE_TAGS
+        .get()
+        .expect("failed to get IMAGE_TAGS_MUTEX")
+        .lock()
+        .expect("failed to lock IMAGE_TAGS_MUTEX")
 }
 
 #[cfg(test)]
