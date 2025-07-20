@@ -384,4 +384,246 @@ mod tests {
         // TODO: 大文字拡張子サポート後はtrueになる予定
         assert!(!is_image("test.JPG"));
     }
+
+    // タグ機能のテスト
+    mod tag_tests {
+        use super::*;
+        use std::fs;
+        use tempfile::TempDir;
+
+        fn setup_test_dir() -> TempDir {
+            let temp_dir = TempDir::new().expect("Failed to create temp dir");
+            temp_dir
+        }
+
+        #[test]
+        fn test_parse_tag_line() {
+            let line = "test.jpg\ttag1,tag2,tag3";
+            let (file_name, tags) = parse_tag_line(line);
+
+            assert_eq!(file_name, "test.jpg");
+            assert_eq!(tags, vec!["tag1", "tag2", "tag3"]);
+        }
+
+        #[test]
+        fn test_parse_tag_line_empty_tags() {
+            let line = "test.jpg\t";
+            let (file_name, tags) = parse_tag_line(line);
+
+            assert_eq!(file_name, "test.jpg");
+            assert_eq!(tags, vec![""]);
+        }
+
+        #[test]
+        fn test_parse_tag_line_no_tabs() {
+            let line = "test.jpg";
+            let (file_name, tags) = parse_tag_line(line);
+
+            assert_eq!(file_name, "test.jpg");
+            assert_eq!(tags, vec![""]);
+        }
+
+        #[test]
+        fn test_get_tag_file_names() {
+            let temp_dir = setup_test_dir();
+            let dir_path = temp_dir.path().to_str().unwrap().to_string();
+
+            let result = get_tag_file_names(dir_path.clone());
+
+            assert!(result.is_ok());
+            let (tag_file, temp_file) = result.unwrap();
+            assert!(tag_file.contains("IMAGE_TAG"));
+            assert!(temp_file.contains("IMAGE_TAG_TEMP"));
+        }
+
+        #[test]
+        fn test_get_tag_file_names_invalid_dir() {
+            let dir_path = "/nonexistent/directory".to_string();
+
+            let result = get_tag_file_names(dir_path);
+
+            assert!(result.is_err());
+            assert!(result
+                .unwrap_err()
+                .contains("is not exist or not a directory"));
+        }
+
+        #[test]
+        fn test_parse_tags_file_empty_dir() {
+            let temp_dir = setup_test_dir();
+            let dir_path = temp_dir.path().to_str().unwrap();
+
+            let result = parse_tags_file(dir_path);
+
+            // 空のディレクトリでは空のHashMapが返される
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap().len(), 0);
+        }
+
+        #[test]
+        fn test_parse_tags_file_with_content() {
+            let temp_dir = setup_test_dir();
+            let dir_path = temp_dir.path().to_str().unwrap();
+            let tag_file_path = temp_dir.path().join("IMAGE_TAG");
+
+            // テスト用のタグファイルを作成
+            let content = "image1.jpg\ttag1,tag2\nimage2.png\ttag3,tag4,tag5\n";
+            fs::write(&tag_file_path, content).expect("Failed to write test file");
+
+            let result = parse_tags_file(dir_path);
+
+            assert!(result.is_ok());
+            let tags_map = result.unwrap();
+            assert_eq!(tags_map.len(), 2);
+
+            assert_eq!(tags_map["image1.jpg"], vec!["tag1", "tag2"]);
+            assert_eq!(tags_map["image2.png"], vec!["tag3", "tag4", "tag5"]);
+        }
+
+        #[test]
+        fn test_load_tags_in_dir_command() {
+            let temp_dir = setup_test_dir();
+            let dir_path = temp_dir.path().to_str().unwrap().to_string();
+            let tag_file_path = temp_dir.path().join("IMAGE_TAG");
+
+            // テスト用のタグファイルを作成
+            let content = "photo.jpg\tnature,landscape\nvideo.mp4\ttime,family\n";
+            fs::write(&tag_file_path, content).expect("Failed to write test file");
+
+            // IMAGE_TAGSを初期化
+            if IMAGE_TAGS.get().is_none() {
+                IMAGE_TAGS
+                    .set(Mutex::new(HashMap::new()))
+                    .expect("Failed to set IMAGE_TAGS");
+            }
+
+            let result = load_tags_in_dir(dir_path);
+
+            assert!(result.is_ok());
+            let tags_map = result.unwrap();
+            assert_eq!(tags_map.len(), 2);
+            assert_eq!(tags_map["photo.jpg"], vec!["nature", "landscape"]);
+            assert_eq!(tags_map["video.mp4"], vec!["time", "family"]);
+        }
+
+        #[test]
+        fn test_save_tags_command() {
+            let temp_dir = setup_test_dir();
+            let test_file = temp_dir.path().join("test.jpg");
+
+            // テスト用の画像ファイルを作成
+            fs::write(&test_file, "fake image content").expect("Failed to create test file");
+
+            let img_path = test_file.to_str().unwrap().to_string();
+            let tags = vec!["nature".to_string(), "sunset".to_string()];
+
+            // IMAGE_TAGSを初期化
+            if IMAGE_TAGS.get().is_none() {
+                IMAGE_TAGS
+                    .set(Mutex::new(HashMap::new()))
+                    .expect("Failed to set IMAGE_TAGS");
+            }
+
+            let result = save_tags(img_path, tags.clone());
+
+            assert!(result.is_ok());
+
+            // タグファイルが作成されているか確認
+            let tag_file_path = temp_dir.path().join("IMAGE_TAG");
+            assert!(tag_file_path.exists());
+
+            // タグファイルの内容を確認
+            let content = fs::read_to_string(&tag_file_path).expect("Failed to read tag file");
+            assert!(content.contains("test.jpg"));
+            assert!(content.contains("nature,sunset"));
+        }
+
+        #[test]
+        fn test_save_tags_nonexistent_file() {
+            let img_path = "/nonexistent/path/test.jpg".to_string();
+            let tags = vec!["tag1".to_string()];
+
+            // IMAGE_TAGSを初期化
+            if IMAGE_TAGS.get().is_none() {
+                IMAGE_TAGS
+                    .set(Mutex::new(HashMap::new()))
+                    .expect("Failed to set IMAGE_TAGS");
+            }
+
+            let result = save_tags(img_path, tags);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("is not exist or not a file"));
+        }
+
+        #[test]
+        fn test_tags_cache_behavior() {
+            let temp_dir = setup_test_dir();
+            let dir_path = temp_dir.path().to_str().unwrap().to_string();
+            let tag_file_path = temp_dir.path().join("IMAGE_TAG");
+
+            // 初期のタグファイルを作成
+            let content = "image1.jpg\ttag1\n";
+            fs::write(&tag_file_path, content).expect("Failed to write test file");
+
+            // IMAGE_TAGSを初期化
+            if IMAGE_TAGS.get().is_none() {
+                IMAGE_TAGS
+                    .set(Mutex::new(HashMap::new()))
+                    .expect("Failed to set IMAGE_TAGS");
+            }
+
+            // 最初の読み込み
+            let result1 = load_tags_in_dir(dir_path.clone());
+            assert!(result1.is_ok());
+            assert_eq!(result1.unwrap()["image1.jpg"], vec!["tag1"]);
+
+            // ファイルを変更（ただしキャッシュは更新されない想定）
+            let new_content = "image1.jpg\ttag1,tag2\n";
+            fs::write(&tag_file_path, new_content).expect("Failed to write test file");
+
+            // 2回目の読み込み（キャッシュから取得される）
+            let result2 = load_tags_in_dir(dir_path);
+            assert!(result2.is_ok());
+            // キャッシュされた値が返される
+            assert_eq!(result2.unwrap()["image1.jpg"], vec!["tag1"]);
+        }
+
+        #[test]
+        fn test_multiple_files_in_directory() {
+            let temp_dir = setup_test_dir();
+            let test_file1 = temp_dir.path().join("photo1.jpg");
+            let test_file2 = temp_dir.path().join("photo2.png");
+
+            // テスト用ファイルを作成
+            fs::write(&test_file1, "fake content").expect("Failed to create test file");
+            fs::write(&test_file2, "fake content").expect("Failed to create test file");
+
+            // IMAGE_TAGSを初期化
+            if IMAGE_TAGS.get().is_none() {
+                IMAGE_TAGS
+                    .set(Mutex::new(HashMap::new()))
+                    .expect("Failed to set IMAGE_TAGS");
+            }
+
+            // 複数のファイルにタグを保存
+            let _ = save_tags(
+                test_file1.to_str().unwrap().to_string(),
+                vec!["nature".to_string()],
+            );
+            let _ = save_tags(
+                test_file2.to_str().unwrap().to_string(),
+                vec!["portrait".to_string()],
+            );
+
+            // ディレクトリのタグを読み込み
+            let result = load_tags_in_dir(temp_dir.path().to_str().unwrap().to_string());
+
+            assert!(result.is_ok());
+            let tags_map = result.unwrap();
+            assert_eq!(tags_map.len(), 2);
+            assert_eq!(tags_map["photo1.jpg"], vec!["nature"]);
+            assert_eq!(tags_map["photo2.png"], vec!["portrait"]);
+        }
+    }
 }
