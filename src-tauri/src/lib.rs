@@ -718,12 +718,12 @@ mod tests {
         fn test_save_tags_validation_security() {
             let temp_dir = setup_test_dir();
             let test_file = temp_dir.path().join("test.jpg");
-            
+
             // テスト用の画像ファイルを作成
             fs::write(&test_file, "fake image content").expect("Failed to create test file");
-            
+
             let img_path = test_file.to_str().unwrap().to_string();
-            
+
             // IMAGE_TAGSを初期化
             if IMAGE_TAGS.get().is_none() {
                 IMAGE_TAGS
@@ -751,7 +751,7 @@ mod tests {
         #[test]
         fn test_path_validation_security() {
             let temp_dir = setup_test_dir();
-            
+
             // IMAGE_TAGSを初期化
             if IMAGE_TAGS.get().is_none() {
                 IMAGE_TAGS
@@ -767,7 +767,7 @@ mod tests {
             // ファイルをディレクトリとして指定
             let test_file = temp_dir.path().join("test.txt");
             fs::write(&test_file, "test content").expect("Failed to create test file");
-            
+
             let result = load_tags_in_dir(test_file.to_str().unwrap().to_string());
             assert!(result.is_err());
             assert!(result.unwrap_err().contains("is not a directory"));
