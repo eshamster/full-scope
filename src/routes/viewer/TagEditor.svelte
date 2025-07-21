@@ -1,196 +1,3 @@
-<script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
-
-  type Props = {
-    show: boolean;
-    imagePath: string;
-    initialTags: string[];
-    onSave: (tags: string[]) => void;
-    onCancel: () => void;
-  };
-
-  const { show, imagePath, initialTags, onSave, onCancel }: Props = $props();
-  
-  let tagsText = $state('');
-  let textAreaElement = $state<HTMLTextAreaElement>();
-  let ignoreNextInput = $state(false);
-  let validationError = $state<string | null>(null);
-
-  // タグ配列をカンマ区切り文字列に変換
-  $effect(() => {
-    if (show) {
-      tagsText = initialTags.join(', ');
-      // エディタを開いた直後の入力を一時的に無視
-      ignoreNextInput = true;
-      setTimeout(() => {
-        ignoreNextInput = false;
-      }, 100); // 100ms後に入力を受け付ける
-    }
-  });
-
-  function handleKeydown(event: KeyboardEvent) {
-    if (!show) return;
-    
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      event.stopPropagation();
-      handleSave();
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      event.stopPropagation();
-      handleCancel();
-    } else {
-      // タグエディタ表示中は他のキー操作も阻止
-      event.stopPropagation();
-      
-      // 開始直後の文字入力を無視（Tキーの重複入力防止）
-      if (ignoreNextInput && event.key.length === 1) {
-        event.preventDefault();
-      }
-    }
-  }
-
-  // タグの入力値検証
-  function validateTags(tags: string[]): string | null {
-    // タグ数制限
-    if (tags.length > 50) {
-      return 'タグの数が多すぎます（最大50個）';
-    }
-
-    for (const tag of tags) {
-      if (tag.length === 0) continue;
-
-      // 長さ制限
-      if (tag.length > 100) {
-        return `タグが長すぎます（最大100文字）: "${tag.substring(0, 20)}..."`;
-      }
-
-      // 禁止文字チェック
-      if (tag.includes('\t') || tag.includes('\n') || tag.includes('\r')) {
-        return `タグに禁止文字が含まれています: "${tag}"`;
-      }
-
-      // 制御文字チェック
-      if (/[\x00-\x1f\x7f]/.test(tag)) {
-        return `タグに制御文字が含まれています: "${tag}"`;
-      }
-    }
-
-    return null;
-  }
-
-  // リアルタイムバリデーション
-  $effect(() => {
-    if (!show || tagsText.length === 0) {
-      validationError = null;
-      return;
-    }
-
-    const tags = tagsText
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0);
-    
-    validationError = validateTags(tags);
-  });
-
-  function handleSave() {
-    // カンマ区切りテキストをタグ配列に変換（空文字除去、トリム）
-    const tags = tagsText
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0);
-    
-    // 保存前の最終検証
-    const error = validateTags(tags);
-    if (error) {
-      validationError = error;
-      return;
-    }
-    
-    onSave(tags);
-  }
-
-  function handleCancel() {
-    onCancel();
-  }
-
-  // モーダル表示時にテキストエリアにフォーカス
-  $effect(() => {
-    if (show && textAreaElement) {
-      textAreaElement.focus();
-      textAreaElement.select();
-    }
-  });
-
-  // キャプチャフェーズでキーイベントを処理してController側の処理を阻止
-  let keyHandler: (e: KeyboardEvent) => void;
-  let keyUpHandler: (e: KeyboardEvent) => void;
-  onMount(() => {
-    keyHandler = (e: KeyboardEvent) => {
-      if (show) {
-        handleKeydown(e);
-      }
-    };
-    keyUpHandler = (e: KeyboardEvent) => {
-      if (show && ignoreNextInput) {
-        // キーが離された時点で入力無視を解除（より早く反応させる）
-        ignoreNextInput = false;
-      }
-    };
-    // キャプチャフェーズでハンドラを登録し、バブリングフェーズの他リスナーを阻止
-    document.addEventListener('keydown', keyHandler, true);
-    document.addEventListener('keyup', keyUpHandler, true);
-  });
-  onDestroy(() => {
-    document.removeEventListener('keydown', keyHandler, true);
-    document.removeEventListener('keyup', keyUpHandler, true);
-  });
-</script>
-
-{#if show}
-  <div class="modal-overlay" onclick={(e) => {
-    if (e.target === e.currentTarget) handleCancel();
-  }} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && handleCancel()}>
-    <div class="modal-content">
-      <h3>タグ編集</h3>
-      <div class="image-path">
-        {imagePath}
-      </div>
-      <textarea
-        bind:this={textAreaElement}
-        bind:value={tagsText}
-        oninput={(e) => {
-          // 開始直後の入力を無視
-          if (ignoreNextInput) {
-            e.preventDefault();
-            tagsText = initialTags.join(', ');
-          }
-        }}
-        placeholder="タグをカンマ区切りで入力してください"
-        rows="4"
-        cols="50"
-        class:error={validationError}
-      ></textarea>
-      {#if validationError}
-        <div class="validation-error">
-          {validationError}
-        </div>
-      {/if}
-      <div class="button-group">
-        <button 
-          onclick={handleSave} 
-          class="save-button"
-          disabled={validationError !== null}
-        >
-          保存 (Enter)
-        </button>
-        <button onclick={handleCancel} class="cancel-button">キャンセル (Escape)</button>
-      </div>
-    </div>
-  </div>
-{/if}
-
 <style>
   .modal-overlay {
     position: fixed;
@@ -291,3 +98,198 @@
     background-color: #545b62;
   }
 </style>
+
+<script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
+
+  type Props = {
+    show: boolean;
+    imagePath: string;
+    initialTags: string[];
+    onSave: (tags: string[]) => void;
+    onCancel: () => void;
+  };
+
+  const { show, imagePath, initialTags, onSave, onCancel }: Props = $props();
+
+  let tagsText = $state('');
+  let textAreaElement = $state<HTMLTextAreaElement>();
+  let ignoreNextInput = $state(false);
+  let validationError = $state<string | null>(null);
+
+  // タグ配列をカンマ区切り文字列に変換
+  $effect(() => {
+    if (show) {
+      tagsText = initialTags.join(', ');
+      // エディタを開いた直後の入力を一時的に無視
+      ignoreNextInput = true;
+      setTimeout(() => {
+        ignoreNextInput = false;
+      }, 100); // 100ms後に入力を受け付ける
+    }
+  });
+
+  function handleKeydown(event: KeyboardEvent) {
+    if (!show) return;
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      event.stopPropagation();
+      handleSave();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      handleCancel();
+    } else {
+      // タグエディタ表示中は他のキー操作も阻止
+      event.stopPropagation();
+
+      // 開始直後の文字入力を無視（Tキーの重複入力防止）
+      if (ignoreNextInput && event.key.length === 1) {
+        event.preventDefault();
+      }
+    }
+  }
+
+  // タグの入力値検証
+  function validateTags(tags: string[]): string | null {
+    // タグ数制限
+    if (tags.length > 50) {
+      return 'タグの数が多すぎます（最大50個）';
+    }
+
+    for (const tag of tags) {
+      if (tag.length === 0) continue;
+
+      // 長さ制限
+      if (tag.length > 100) {
+        return `タグが長すぎます（最大100文字）: "${tag.substring(0, 20)}..."`;
+      }
+
+      // 禁止文字チェック
+      if (tag.includes('\t') || tag.includes('\n') || tag.includes('\r')) {
+        return `タグに禁止文字が含まれています: "${tag}"`;
+      }
+
+      // 制御文字チェック
+      if (/[\x00-\x1f\x7f]/.test(tag)) {
+        return `タグに制御文字が含まれています: "${tag}"`;
+      }
+    }
+
+    return null;
+  }
+
+  // リアルタイムバリデーション
+  $effect(() => {
+    if (!show || tagsText.length === 0) {
+      validationError = null;
+      return;
+    }
+
+    const tags = tagsText
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0);
+
+    validationError = validateTags(tags);
+  });
+
+  function handleSave() {
+    // カンマ区切りテキストをタグ配列に変換（空文字除去、トリム）
+    const tags = tagsText
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0);
+
+    // 保存前の最終検証
+    const error = validateTags(tags);
+    if (error) {
+      validationError = error;
+      return;
+    }
+
+    onSave(tags);
+  }
+
+  function handleCancel() {
+    onCancel();
+  }
+
+  // モーダル表示時にテキストエリアにフォーカス
+  $effect(() => {
+    if (show && textAreaElement) {
+      textAreaElement.focus();
+      textAreaElement.select();
+    }
+  });
+
+  // キャプチャフェーズでキーイベントを処理してController側の処理を阻止
+  let keyHandler: (e: KeyboardEvent) => void;
+  let keyUpHandler: (e: KeyboardEvent) => void;
+  onMount(() => {
+    keyHandler = (e: KeyboardEvent) => {
+      if (show) {
+        handleKeydown(e);
+      }
+    };
+    keyUpHandler = (e: KeyboardEvent) => {
+      if (show && ignoreNextInput) {
+        // キーが離された時点で入力無視を解除（より早く反応させる）
+        ignoreNextInput = false;
+      }
+    };
+    // キャプチャフェーズでハンドラを登録し、バブリングフェーズの他リスナーを阻止
+    document.addEventListener('keydown', keyHandler, true);
+    document.addEventListener('keyup', keyUpHandler, true);
+  });
+  onDestroy(() => {
+    document.removeEventListener('keydown', keyHandler, true);
+    document.removeEventListener('keyup', keyUpHandler, true);
+  });
+</script>
+
+{#if show}
+  <div
+    class="modal-overlay"
+    onclick={e => {
+      if (e.target === e.currentTarget) handleCancel();
+    }}
+    role="button"
+    tabindex="0"
+    onkeydown={e => e.key === 'Enter' && handleCancel()}
+  >
+    <div class="modal-content">
+      <h3>タグ編集</h3>
+      <div class="image-path">
+        {imagePath}
+      </div>
+      <textarea
+        bind:this={textAreaElement}
+        bind:value={tagsText}
+        oninput={e => {
+          // 開始直後の入力を無視
+          if (ignoreNextInput) {
+            e.preventDefault();
+            tagsText = initialTags.join(', ');
+          }
+        }}
+        placeholder="タグをカンマ区切りで入力してください"
+        rows="4"
+        cols="50"
+        class:error={validationError}
+      ></textarea>
+      {#if validationError}
+        <div class="validation-error">
+          {validationError}
+        </div>
+      {/if}
+      <div class="button-group">
+        <button onclick={handleSave} class="save-button" disabled={validationError !== null}>
+          保存 (Enter)
+        </button>
+        <button onclick={handleCancel} class="cancel-button">キャンセル (Escape)</button>
+      </div>
+    </div>
+  </div>
+{/if}

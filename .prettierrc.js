@@ -6,7 +6,6 @@ export default {
   semi: true,
   svelteSortOrder: 'options-styles-scripts-markup',
   svelteStrictMode: false,
-  svelteBracketNewLine: true,
   svelteIndentScriptAndStyle: true,
   trailingComma: 'es5',
   tabWidth: 2,

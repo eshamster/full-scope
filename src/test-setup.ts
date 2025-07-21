@@ -5,27 +5,27 @@ import { vi } from 'vitest';
 const mockTauri = {
   invoke: vi.fn(),
   listen: vi.fn(),
-  emit: vi.fn()
+  emit: vi.fn(),
 };
 
 // グローバルなTauri APIをモック
 Object.defineProperty(window, '__TAURI__', {
-  value: mockTauri
+  value: mockTauri,
 });
 
 // $app/stores のモック
 vi.mock('$app/stores', () => ({
   page: {
-    subscribe: vi.fn()
+    subscribe: vi.fn(),
   },
   navigating: {
-    subscribe: vi.fn()
-  }
+    subscribe: vi.fn(),
+  },
 }));
 
 // $app/navigation のモック
 vi.mock('$app/navigation', () => ({
   goto: vi.fn(),
   beforeNavigate: vi.fn(),
-  afterNavigate: vi.fn()
+  afterNavigate: vi.fn(),
 }));

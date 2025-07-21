@@ -1,20 +1,3 @@
-<script lang="ts">
-  import { fade } from 'svelte/transition';
-
-  type Props = {
-    message: string;
-    show: boolean;
-  };
-
-  let { message, show }: Props = $props();
-</script>
-
-{#if show}
-  <div class="corner-toast" transition:fade={{duration: 100}}>
-    <div class="message">{message}</div>
-  </div>
-{/if}
-
 <style>
   .corner-toast {
     position: fixed;
@@ -30,3 +13,20 @@
     font-size: 1rem;
   }
 </style>
+
+<script lang="ts">
+  import { fade } from 'svelte/transition';
+
+  type Props = {
+    message: string;
+    show: boolean;
+  };
+
+  let { message, show }: Props = $props();
+</script>
+
+{#if show}
+  <div class="corner-toast" transition:fade={{ duration: 100 }}>
+    <div class="message">{message}</div>
+  </div>
+{/if}

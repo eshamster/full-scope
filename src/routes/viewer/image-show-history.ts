@@ -1,9 +1,8 @@
 class ImageShowHistoryElem {
   constructor(
     private prevPath: string,
-    private nextPath: string,
-  ) {
-  }
+    private nextPath: string
+  ) {}
 
   public getPrevPath(): string {
     return this.prevPath;

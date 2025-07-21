@@ -3,7 +3,7 @@ import { ToastController } from './toast-controller.svelte';
 
 export class TagController {
   private tagsCache = new Map<string, Record<string, string[]>>();
-  
+
   constructor(private toastController: ToastController) {}
 
   /**
@@ -14,14 +14,14 @@ export class TagController {
   public async getImageTags(imagePath: string): Promise<string[]> {
     const dirPath = this.getDirPath(imagePath);
     const fileName = this.getFileName(imagePath);
-    
+
     try {
       // キャッシュがあればそれを使用、なければAPIから取得
       if (!this.tagsCache.has(dirPath)) {
         const tagsMap = await loadTagsInDir(dirPath);
         this.tagsCache.set(dirPath, tagsMap);
       }
-      
+
       const tagsMap = this.tagsCache.get(dirPath)!;
       return tagsMap[fileName] || [];
     } catch (error) {
@@ -43,19 +43,19 @@ export class TagController {
       this.toastController.showToast(validationError);
       throw new Error(validationError);
     }
-    
+
     try {
       await saveTags(imagePath, tags);
-      
+
       // キャッシュを更新
       const dirPath = this.getDirPath(imagePath);
       const fileName = this.getFileName(imagePath);
-      
+
       if (this.tagsCache.has(dirPath)) {
         const tagsMap = this.tagsCache.get(dirPath)!;
         tagsMap[fileName] = tags;
       }
-      
+
       this.toastController.showToast('タグを保存しました');
     } catch (error) {
       console.error('Failed to save tags:', error);
