@@ -97,7 +97,9 @@ describe('TagEditor', () => {
       
       const overlay = container.querySelector('.modal-overlay');
       expect(overlay).toBeTruthy();
-      await fireEvent.click(overlay);
+      if (overlay) {
+        await fireEvent.click(overlay);
+      }
       
       expect(defaultProps.onCancel).toHaveBeenCalled();
     });

@@ -20,7 +20,8 @@ static IMAGE_PATHS: OnceLock<Mutex<ImagePaths>> = OnceLock::new();
 
 // 画像のタグ情報をメモリに保持する
 // Directory(String) > FileName(String) > Tags(Vec<String>) のマップ
-static IMAGE_TAGS: OnceLock<Mutex<HashMap<String, HashMap<String, Vec<String>>>>> = OnceLock::new();
+type ImageTagsMap = HashMap<String, HashMap<String, Vec<String>>>;
+static IMAGE_TAGS: OnceLock<Mutex<ImageTagsMap>> = OnceLock::new();
 
 const TAG_FILE_NAME: &str = "IMAGE_TAG";
 const TAG_TEMP_FILE_NAME: &str = "IMAGE_TAG_TEMP";
@@ -187,7 +188,7 @@ fn parse_tags_file(dir_path: &str) -> Result<HashMap<String, Vec<String>>, Strin
     }
 
     let file = std::fs::File::open(tag_file_name.clone())
-        .expect(format!("failed to open tag file: {}", tag_file_name.clone()).as_str());
+        .unwrap_or_else(|_| panic!("failed to open tag file: {}", tag_file_name.clone()));
     let reader = std::io::BufReader::new(file);
     let mut result = HashMap::new();
     for line in reader.lines() {
@@ -338,9 +339,7 @@ fn get_tag_file_names(dir_path: String) -> Result<(String, String), String> {
 fn save_tags(img_path: String, tags: Vec<String>) -> Result<(), String> {
     // 入力値検証: タグの検証
     for tag in &tags {
-        if let Err(err) = validate_tag(tag) {
-            return Err(err);
-        }
+        validate_tag(tag)?;
     }
 
     // パス検証: パストラバーサル攻撃を防ぐ
@@ -374,7 +373,7 @@ fn save_tags(img_path: String, tags: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
-fn must_lock_image_tags<'a>() -> MutexGuard<'a, HashMap<String, HashMap<String, Vec<String>>>> {
+fn must_lock_image_tags<'a>() -> MutexGuard<'a, ImageTagsMap> {
     IMAGE_TAGS
         .get()
         .expect("failed to get IMAGE_TAGS_MUTEX")

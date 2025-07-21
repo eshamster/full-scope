@@ -12,7 +12,7 @@
   const { show, imagePath, initialTags, onSave, onCancel }: Props = $props();
   
   let tagsText = $state('');
-  let textAreaElement: HTMLTextAreaElement;
+  let textAreaElement = $state<HTMLTextAreaElement>();
   let ignoreNextInput = $state(false);
   let validationError = $state<string | null>(null);
 
@@ -149,8 +149,10 @@
 </script>
 
 {#if show}
-  <div class="modal-overlay" on:click={handleCancel}>
-    <div class="modal-content" on:click|stopPropagation>
+  <div class="modal-overlay" onclick={(e) => {
+    if (e.target === e.currentTarget) handleCancel();
+  }} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && handleCancel()}>
+    <div class="modal-content">
       <h3>タグ編集</h3>
       <div class="image-path">
         {imagePath}
@@ -158,7 +160,7 @@
       <textarea
         bind:this={textAreaElement}
         bind:value={tagsText}
-        on:input={(e) => {
+        oninput={(e) => {
           // 開始直後の入力を無視
           if (ignoreNextInput) {
             e.preventDefault();
@@ -177,13 +179,13 @@
       {/if}
       <div class="button-group">
         <button 
-          on:click={handleSave} 
+          onclick={handleSave} 
           class="save-button"
           disabled={validationError !== null}
         >
           保存 (Enter)
         </button>
-        <button on:click={handleCancel} class="cancel-button">キャンセル (Escape)</button>
+        <button onclick={handleCancel} class="cancel-button">キャンセル (Escape)</button>
       </div>
     </div>
   </div>
