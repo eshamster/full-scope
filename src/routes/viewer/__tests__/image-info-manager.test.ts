@@ -291,4 +291,44 @@ describe('ImageInfoManager', () => {
       expect(() => manager.getCurrentList(1)).toThrow('No images');
     });
   });
+
+  describe('image info display', () => {
+    beforeEach(async () => {
+      await manager.addImages(testImages);
+    });
+
+    it('should start with image info display hidden', () => {
+      expect(manager.isImageInfoDisplayed()).toBe(false);
+    });
+
+    it('should toggle image info display state', () => {
+      // Initially false
+      expect(manager.isImageInfoDisplayed()).toBe(false);
+
+      // Toggle to true
+      manager.toggleImageInfoDisplay();
+      expect(manager.isImageInfoDisplayed()).toBe(true);
+
+      // Toggle back to false
+      manager.toggleImageInfoDisplay();
+      expect(manager.isImageInfoDisplayed()).toBe(false);
+    });
+
+    it('should maintain display state independently of other operations', () => {
+      // Enable display
+      manager.toggleImageInfoDisplay();
+      expect(manager.isImageInfoDisplayed()).toBe(true);
+
+      // Other operations should not affect display state
+      manager.gotoNext();
+      manager.bookmarkCurrent();
+      manager.gotoPrev();
+
+      expect(manager.isImageInfoDisplayed()).toBe(true);
+
+      // Disable display
+      manager.toggleImageInfoDisplay();
+      expect(manager.isImageInfoDisplayed()).toBe(false);
+    });
+  });
 });

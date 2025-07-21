@@ -19,7 +19,8 @@ export type Operation =
   | 'decrementRows'
   | 'incrementCols'
   | 'decrementCols'
-  | 'editTags';
+  | 'editTags'
+  | 'toggleImageInfo';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -53,6 +54,7 @@ const keyConfigs: keyConfig[] = [
   { key: 'l', operation: 'incrementCols', modifierKeys: [] },
   { key: 'l', operation: 'decrementCols', modifierKeys: ['shift'] },
   { key: 't', operation: 'editTags', modifierKeys: [] },
+  { key: 'i', operation: 'toggleImageInfo', modifierKeys: [] },
 ];
 
 export class Controler {
@@ -174,6 +176,9 @@ export class Controler {
         if (this.onEditTags) {
           this.onEditTags();
         }
+        break;
+      case 'toggleImageInfo':
+        this.imageInfoManager.toggleImageInfoDisplay();
         break;
     }
   }

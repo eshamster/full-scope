@@ -79,6 +79,7 @@
   import CornerToast from '@/routes/viewer/CornerToast.svelte';
   import TagEditor from './TagEditor.svelte';
   import { TagController } from './tag-controller.svelte';
+  import ImageInfoDisplay from './image-info-display.svelte';
 
   getCurrentWindow().setFullscreen(true);
 
@@ -295,4 +296,9 @@
     onSave={handleTagSave}
     onCancel={handleTagCancel}
   ></TagEditor>
+
+  <ImageInfoDisplay
+    show={manager.isImageInfoDisplayed()}
+    imageInfo={manager.getList().length > 0 ? manager.getCurrent() : null}
+  ></ImageInfoDisplay>
 </main>

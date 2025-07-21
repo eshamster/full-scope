@@ -13,6 +13,7 @@ export class ImageInfoManager {
   private semaphore = new Semaphore(1);
   private caret: number = $state(0);
   private history: ImageShowHistory = new ImageShowHistory();
+  private showImageInfo: boolean = $state(false);
 
   public async addImages(images: ImageInfo[]): Promise<void> {
     // await this.semaphore.use(async () => {
@@ -161,5 +162,15 @@ export class ImageInfoManager {
   private findImageByPath(path: string): ImageInfo | null {
     const index = this.list.findIndex(image => image.path === path);
     return index === -1 ? null : this.list[index];
+  }
+
+  // --- 画像情報表示 --- //
+
+  public toggleImageInfoDisplay(): void {
+    this.showImageInfo = !this.showImageInfo;
+  }
+
+  public isImageInfoDisplayed(): boolean {
+    return this.showImageInfo;
   }
 }

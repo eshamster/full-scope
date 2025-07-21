@@ -1031,6 +1031,7 @@ dependencies = [
 name = "full-scope"
 version = "0.1.0"
 dependencies = [
+ "imagesize",
  "serde",
  "serde_json",
  "tauri",
@@ -1740,6 +1741,12 @@ dependencies = [
  "icu_normalizer",
  "icu_properties",
 ]
+
+[[package]]
+name = "imagesize"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "029d73f573d8e8d63e6d5020011d3255b28c3ba85d6cf870a07184ed23de9284"
 
 [[package]]
 name = "indexmap"

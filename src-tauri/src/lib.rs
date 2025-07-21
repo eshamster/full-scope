@@ -121,6 +121,46 @@ fn delete_file(path: String) -> Result<(), String> {
     }
 }
 
+// ファイル情報を取得するTauriコマンド
+#[derive(serde::Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct FileInfo {
+    size: u64,
+    width: u32,
+    height: u32,
+}
+
+#[tauri::command]
+fn get_file_info(file_path: String) -> Result<FileInfo, String> {
+    let path = Path::new(&file_path);
+
+    // ファイルの存在確認
+    if !path.exists() {
+        return Err(format!("{file_path} does not exist"));
+    }
+
+    if !path.is_file() {
+        return Err(format!("{file_path} is not a file"));
+    }
+
+    // ファイルサイズを取得
+    let metadata =
+        std::fs::metadata(path).map_err(|e| format!("Failed to get file metadata: {e}"))?;
+    let file_size = metadata.len();
+
+    // 画像の寸法を取得
+    let (width, height) = match imagesize::size(path) {
+        Ok(size) => (size.width as u32, size.height as u32),
+        Err(e) => return Err(format!("Failed to get image dimensions: {e}")),
+    };
+
+    Ok(FileInfo {
+        size: file_size,
+        width,
+        height,
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     IMAGE_PATHS
@@ -142,6 +182,7 @@ pub fn run() {
             delete_file,
             load_tags_in_dir,
             save_tags,
+            get_file_info,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -796,6 +837,165 @@ mod tests {
             assert_eq!(tags_map.len(), 2);
             assert_eq!(tags_map["photo1.jpg"], vec!["nature"]);
             assert_eq!(tags_map["photo2.png"], vec!["portrait"]);
+        }
+    }
+
+    // ファイル情報取得機能のテスト
+    mod file_info_tests {
+        use super::*;
+        use std::fs;
+        use tempfile::TempDir;
+
+        // テスト用画像の期待値定数
+        const TEST_IMAGE_WIDTH: u32 = 2;
+        const TEST_IMAGE_HEIGHT: u32 = 3;
+        const TEST_IMAGE_SIZE: u64 = 69; // 以下のPNGデータのバイト数
+
+        fn setup_test_dir() -> TempDir {
+            let temp_dir = TempDir::new().expect("Failed to create temp dir");
+            temp_dir
+        }
+
+        fn create_test_image(path: &std::path::Path) {
+            // 2x3ピクセルの最小限のPNG画像データ
+            let png_data = [
+                0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+                0x00, 0x00, 0x00, 0x0D, // IHDR chunk length
+                0x49, 0x48, 0x44, 0x52, // IHDR chunk type
+                0x00, 0x00, 0x00, 0x02, // Width (2)
+                0x00, 0x00, 0x00, 0x03, // Height (3)
+                0x08, 0x02, 0x00, 0x00,
+                0x00, // Bit depth, color type, compression, filter, interlace
+                0x12, 0x16, 0xF1, 0x4D, // CRC
+                0x00, 0x00, 0x00, 0x0C, // IDAT chunk length
+                0x49, 0x44, 0x41, 0x54, // IDAT chunk type
+                0x08, 0x99, 0x01, 0x01, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00,
+                0x00, // Image data
+                0x02, 0x00, 0x01, 0x00, // CRC
+                0x00, 0x00, 0x00, 0x00, // IEND chunk length
+                0x49, 0x45, 0x4E, 0x44, // IEND chunk type
+                0xAE, 0x42, 0x60, 0x82, // CRC
+            ];
+            fs::write(path, &png_data).expect("Failed to create test image");
+        }
+
+        #[test]
+        fn test_get_file_info_success() {
+            let temp_dir = setup_test_dir();
+            let test_file = temp_dir.path().join("test.png");
+
+            create_test_image(&test_file);
+
+            let result = get_file_info(test_file.to_str().unwrap().to_string());
+
+            assert!(result.is_ok());
+            let file_info = result.unwrap();
+            assert_eq!(file_info.size, TEST_IMAGE_SIZE);
+            assert_eq!(file_info.width, TEST_IMAGE_WIDTH);
+            assert_eq!(file_info.height, TEST_IMAGE_HEIGHT);
+        }
+
+        #[test]
+        fn test_get_file_info_nonexistent_file() {
+            let result = get_file_info("/nonexistent/file.png".to_string());
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("does not exist"));
+        }
+
+        #[test]
+        fn test_get_file_info_directory_instead_of_file() {
+            let temp_dir = setup_test_dir();
+            let dir_path = temp_dir.path().to_str().unwrap().to_string();
+
+            let result = get_file_info(dir_path);
+
+            assert!(result.is_err());
+            assert!(result.unwrap_err().contains("is not a file"));
+        }
+
+        #[test]
+        fn test_get_file_info_invalid_image() {
+            let temp_dir = setup_test_dir();
+            let test_file = temp_dir.path().join("test.txt");
+
+            // テキストファイルを作成（画像ではない）
+            fs::write(&test_file, "This is not an image").expect("Failed to create test file");
+
+            let result = get_file_info(test_file.to_str().unwrap().to_string());
+
+            assert!(result.is_err());
+            assert!(result
+                .unwrap_err()
+                .contains("Failed to get image dimensions"));
+        }
+
+        #[test]
+        fn test_get_file_info_file_size_consistency() {
+            let temp_dir = setup_test_dir();
+            let test_file = temp_dir.path().join("test.png");
+
+            create_test_image(&test_file);
+
+            let result = get_file_info(test_file.to_str().unwrap().to_string());
+
+            assert!(result.is_ok());
+            let file_info = result.unwrap();
+
+            // 期待値との一致を確認
+            assert_eq!(file_info.size, TEST_IMAGE_SIZE);
+            assert_eq!(file_info.width, TEST_IMAGE_WIDTH);
+            assert_eq!(file_info.height, TEST_IMAGE_HEIGHT);
+        }
+
+        #[test]
+        fn test_get_file_info_with_different_extensions() {
+            let temp_dir = setup_test_dir();
+
+            // 異なる拡張子でテスト（全て同じPNGデータを使用）
+            let extensions = ["test.png", "test.jpg", "test.jpeg", "test.gif", "test.webp"];
+
+            for ext in extensions.iter() {
+                let test_file = temp_dir.path().join(ext);
+                create_test_image(&test_file);
+
+                let result = get_file_info(test_file.to_str().unwrap().to_string());
+
+                // 拡張子に関係なく、実際の画像データが読めれば成功
+                // （この場合は全てPNGデータなので成功）
+                assert!(result.is_ok(), "Failed for extension: {}", ext);
+
+                let file_info = result.unwrap();
+                assert_eq!(
+                    file_info.width, TEST_IMAGE_WIDTH,
+                    "Width mismatch for {}",
+                    ext
+                );
+                assert_eq!(
+                    file_info.height, TEST_IMAGE_HEIGHT,
+                    "Height mismatch for {}",
+                    ext
+                );
+                assert_eq!(file_info.size, TEST_IMAGE_SIZE, "Size mismatch for {}", ext);
+            }
+        }
+
+        #[test]
+        fn test_fileinfo_struct_serialization() {
+            // FileInfo構造体のシリアライゼーションをテスト
+            let file_info = FileInfo {
+                size: TEST_IMAGE_SIZE,
+                width: TEST_IMAGE_WIDTH,
+                height: TEST_IMAGE_HEIGHT,
+            };
+
+            let serialized = serde_json::to_string(&file_info);
+            assert!(serialized.is_ok());
+
+            let json_str = serialized.unwrap();
+            assert!(json_str.contains(&format!("\"size\":{}", TEST_IMAGE_SIZE)));
+            assert!(json_str.contains(&format!("\"width\":{}", TEST_IMAGE_WIDTH)));
+            assert!(json_str.contains(&format!("\"height\":{}", TEST_IMAGE_HEIGHT)));
         }
     }
 }
