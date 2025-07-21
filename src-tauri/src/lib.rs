@@ -385,6 +385,23 @@ fn must_lock_image_tags<'a>() -> MutexGuard<'a, ImageTagsMap> {
 mod tests {
     use super::*;
 
+    /// テスト用のIMAGE_TAGS初期化ヘルパー関数
+    ///
+    /// CI環境などで複数テストが並行実行される際に、グローバルなOnceLock<IMAGE_TAGS>への
+    /// 重複初期化を防ぐためのスレッドセーフな初期化処理。
+    ///
+    /// std::sync::Onceを使用することで：
+    /// - 複数スレッドから同時に呼ばれても安全
+    /// - 確実に一度だけ初期化される
+    /// - OnceLock::set()の重複実行によるpanicを防ぐ
+    fn ensure_image_tags_initialized() {
+        use std::sync::Once;
+        static INIT: Once = Once::new();
+        INIT.call_once(|| {
+            let _ = IMAGE_TAGS.set(Mutex::new(HashMap::new()));
+        });
+    }
+
     #[test]
     fn test_extract_image_files_with_valid_extensions() {
         let paths = vec![
@@ -593,11 +610,7 @@ mod tests {
             fs::write(&tag_file_path, content).expect("Failed to write test file");
 
             // IMAGE_TAGSを初期化
-            if IMAGE_TAGS.get().is_none() {
-                IMAGE_TAGS
-                    .set(Mutex::new(HashMap::new()))
-                    .expect("Failed to set IMAGE_TAGS");
-            }
+            ensure_image_tags_initialized();
 
             let result = load_tags_in_dir(dir_path);
 
@@ -620,11 +633,7 @@ mod tests {
             let tags = vec!["nature".to_string(), "sunset".to_string()];
 
             // IMAGE_TAGSを初期化
-            if IMAGE_TAGS.get().is_none() {
-                IMAGE_TAGS
-                    .set(Mutex::new(HashMap::new()))
-                    .expect("Failed to set IMAGE_TAGS");
-            }
+            ensure_image_tags_initialized();
 
             let result = save_tags(img_path, tags.clone());
 
@@ -646,11 +655,7 @@ mod tests {
             let tags = vec!["tag1".to_string()];
 
             // IMAGE_TAGSを初期化
-            if IMAGE_TAGS.get().is_none() {
-                IMAGE_TAGS
-                    .set(Mutex::new(HashMap::new()))
-                    .expect("Failed to set IMAGE_TAGS");
-            }
+            ensure_image_tags_initialized();
 
             let result = save_tags(img_path, tags);
 
@@ -669,11 +674,7 @@ mod tests {
             fs::write(&tag_file_path, content).expect("Failed to write test file");
 
             // IMAGE_TAGSを初期化
-            if IMAGE_TAGS.get().is_none() {
-                IMAGE_TAGS
-                    .set(Mutex::new(HashMap::new()))
-                    .expect("Failed to set IMAGE_TAGS");
-            }
+            ensure_image_tags_initialized();
 
             // 最初の読み込み
             let result1 = load_tags_in_dir(dir_path.clone());
@@ -724,11 +725,7 @@ mod tests {
             let img_path = test_file.to_str().unwrap().to_string();
 
             // IMAGE_TAGSを初期化
-            if IMAGE_TAGS.get().is_none() {
-                IMAGE_TAGS
-                    .set(Mutex::new(HashMap::new()))
-                    .expect("Failed to set IMAGE_TAGS");
-            }
+            ensure_image_tags_initialized();
 
             // 無効なタグで保存試行: 長すぎるタグ
             let long_tag = "a".repeat(101);
@@ -752,11 +749,7 @@ mod tests {
             let temp_dir = setup_test_dir();
 
             // IMAGE_TAGSを初期化
-            if IMAGE_TAGS.get().is_none() {
-                IMAGE_TAGS
-                    .set(Mutex::new(HashMap::new()))
-                    .expect("Failed to set IMAGE_TAGS");
-            }
+            ensure_image_tags_initialized();
 
             // 存在しないディレクトリ
             let result = load_tags_in_dir("/nonexistent/directory".to_string());
@@ -783,11 +776,7 @@ mod tests {
             fs::write(&test_file2, "fake content").expect("Failed to create test file");
 
             // IMAGE_TAGSを初期化
-            if IMAGE_TAGS.get().is_none() {
-                IMAGE_TAGS
-                    .set(Mutex::new(HashMap::new()))
-                    .expect("Failed to set IMAGE_TAGS");
-            }
+            ensure_image_tags_initialized();
 
             // 複数のファイルにタグを保存
             let _ = save_tags(
