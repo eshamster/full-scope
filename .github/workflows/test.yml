@@ -25,6 +25,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install
         
+      - name: Check code formatting
+        run: npm run format:check
+        
+      - name: Run ESLint
+        run: npm run lint
+        
       - name: Run type checking
         run: npm run check
         
