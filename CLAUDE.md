@@ -116,6 +116,46 @@ export class ImageInfoManager {
 - **Rustファイル編集後**: `src-tauri` フォルダ配下で `cargo fmt` を実行してコードフォーマットを適用
 - **TODO**: hooks設定でRustファイル編集時の自動 `cargo fmt` 実行を設定する
 
+## ローカルテスト実行ガイドライン
+
+CI側でのエラー修正による手戻りを防ぐため、変更のcommit後に必要なテストをローカルで実行する：
+
+### フロントエンドの変更時
+commit後に以下のコマンドを順次実行：
+
+```bash
+# 依存関係インストール（必要に応じて）
+pnpm install
+
+# 型チェック
+npm run check
+
+# フロントエンドテスト実行
+npm run test
+
+# カバレッジ付きテスト実行
+npm run test:coverage
+```
+
+### バックエンドの変更時
+commit後に以下のコマンドを順次実行：
+
+```bash
+# src-tauriディレクトリに移動
+cd src-tauri
+
+# バックエンドテスト実行
+cargo test
+
+# コードフォーマットチェック
+cargo fmt --check
+
+# Clippy（静的解析）実行
+cargo clippy -- -D warnings
+```
+
+**注意**: これらのテストは変更内容に応じて選択的に実行。フロントエンドのみの変更ならフロントエンドテストのみ、バックエンドのみの変更ならバックエンドテストのみを実行すれば十分。
+
 ## 開発ドキュメント管理
 
 ### dev_doc/ フォルダ
