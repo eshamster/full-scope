@@ -19,7 +19,7 @@ describe('TagController', () => {
       showToast: vi.fn(),
       isShow: vi.fn().mockReturnValue(false),
       getMessage: vi.fn().mockReturnValue(''),
-    } as any;
+    } as ToastController;
 
     tagController = new TagController(mockToastController);
 
@@ -32,7 +32,6 @@ describe('TagController', () => {
       // Arrange
       const imagePath = 'D:\\images\\test\\photo.jpg';
       const expectedDirPath = 'D:\\images\\test\\';
-      const expectedFileName = 'photo.jpg';
       const mockTagsMap = {
         'photo.jpg': ['nature', 'landscape'],
         'other.jpg': ['portrait'],
@@ -171,7 +170,6 @@ describe('TagController', () => {
     it('should clear specific directory cache', async () => {
       // Arrange
       const imagePath = 'D:\\images\\test\\photo.jpg';
-      const dirPath = 'D:\\images\\test';
       const mockTagsMap = { 'photo.jpg': ['test'] };
 
       vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(mockTagsMap);

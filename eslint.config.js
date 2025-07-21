@@ -8,6 +8,7 @@ export default [
   js.configs.recommended,
   ...svelte.configs.recommended,
   {
+    files: ['**/*.{js,ts}'],
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -21,8 +22,7 @@ export default [
       parser,
       parserOptions: {
         ecmaVersion: 2022,
-        sourceType: 'module',
-        extraFileExtensions: ['.svelte']
+        sourceType: 'module'
       }
     },
     plugins: {
@@ -40,9 +40,28 @@ export default [
   {
     files: ['**/*.svelte'],
     languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        // Svelte 5 runes globals
+        $state: 'readonly',
+        $props: 'readonly',
+        $derived: 'readonly',
+        $effect: 'readonly'
+      },
       parserOptions: {
         parser: '@typescript-eslint/parser'
       }
+    },
+    plugins: {
+      '@typescript-eslint': ts
+    },
+    rules: {
+      // Disable Svelte reactivity preference for existing code patterns
+      'svelte/prefer-svelte-reactivity': 'off',
+      // Allow unused variables that start with underscore
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
     }
   },
   {

@@ -125,7 +125,7 @@
       showTagEditor = false;
       controller.setTagEditorOpen(false);
     } catch (error) {
-      // エラーはtagController内でToastに表示されるのでここでは何もしない
+      console.error('Tag save error:', error);
     }
   }
 
@@ -212,7 +212,7 @@
     }
   }
 
-  function handleMouseleave(event: MouseEvent) {
+  function handleMouseleave() {
     controller.resetModifierKeys();
   }
 
@@ -272,7 +272,7 @@
              grid-template-columns: repeat({viewerController.getCols()}, 1fr);
              "
     >
-      {#each currentImages as img}
+      {#each currentImages as img (img.path)}
         <div class="cell">
           <img id="image" src={convertFileSrc(img.path)} alt={img.path} />
         </div>

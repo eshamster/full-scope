@@ -125,7 +125,7 @@ export class Controler {
       case 'randomJump':
         this.imageInfoManager.gotoRandom();
         break;
-      case 'delete':
+      case 'delete': {
         const path = this.imageInfoManager.getCurrent().path;
         this.dialogController.showDialog(
           `本当に画像をゴミ箱に移動しますか？\n${path}`,
@@ -137,7 +137,8 @@ export class Controler {
           }
         );
         break;
-      case 'bookmark':
+      }
+      case 'bookmark': {
         const current = this.imageInfoManager.getCurrent();
         const count = this.imageInfoManager.countBookmarked();
         const message = current.isBookmarked()
@@ -147,6 +148,7 @@ export class Controler {
 
         this.imageInfoManager.bookmarkCurrent();
         break;
+      }
       case 'gotoBookmark':
         this.imageInfoManager.gotoNextBookmark();
         break;

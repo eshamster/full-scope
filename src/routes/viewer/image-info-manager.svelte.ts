@@ -1,6 +1,7 @@
 import { ImageInfo } from './image-info';
 import { Semaphore } from 'await-semaphore';
 import { ImageShowHistory } from './image-show-history';
+import { SvelteSet } from 'svelte/reactivity';
 
 // NOTE: 一度に閲覧する画像の総数はタカが知れている想定なので
 // 探索が必要な場合はリストをリニアになめることとする
@@ -8,7 +9,7 @@ import { ImageShowHistory } from './image-show-history';
 
 export class ImageInfoManager {
   private list: ImageInfo[] = $state([]);
-  private pathSet: Set<string> = new Set();
+  private pathSet = new SvelteSet<string>();
   private semaphore = new Semaphore(1);
   private caret: number = $state(0);
   private history: ImageShowHistory = new ImageShowHistory();

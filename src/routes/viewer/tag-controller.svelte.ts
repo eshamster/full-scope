@@ -1,8 +1,9 @@
 import { loadTagsInDir, saveTags } from '@/lib/api/tags';
 import { ToastController } from './toast-controller.svelte';
+import { SvelteMap } from 'svelte/reactivity';
 
 export class TagController {
-  private tagsCache = new Map<string, Record<string, string[]>>();
+  private tagsCache = new SvelteMap<string, Record<string, string[]>>();
 
   constructor(private toastController: ToastController) {}
 
@@ -105,8 +106,11 @@ export class TagController {
       }
 
       // 制御文字チェック
-      if (/[\x00-\x1f\x7f]/.test(tag)) {
-        return `タグに制御文字が含まれています: "${tag}"`;
+      for (let i = 0; i < tag.length; i++) {
+        const charCode = tag.charCodeAt(i);
+        if ((charCode >= 0 && charCode <= 31) || charCode === 127) {
+          return `タグに制御文字が含まれています: "${tag}"`;
+        }
       }
 
       // 先頭末尾空白チェック（ユーザビリティ向上）
@@ -127,10 +131,10 @@ export class TagController {
   // - アクセス頻度に基づくLRU削除
 
   private getDirPath(filePath: string): string {
-    return filePath.replace(/[^\\\/]*$/, '');
+    return filePath.replace(/[^\\/]*$/, '');
   }
 
   private getFileName(filePath: string): string {
-    return filePath.replace(/^.*[\\\/]/, '');
+    return filePath.replace(/^.*[\\/]/, '');
   }
 }

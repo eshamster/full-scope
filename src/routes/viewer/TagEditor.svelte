@@ -106,7 +106,7 @@
     show: boolean;
     imagePath: string;
     initialTags: string[];
-    onSave: (tags: string[]) => void;
+    onSave: (_tags: string[]) => void;
     onCancel: () => void;
   };
 
@@ -172,8 +172,11 @@
       }
 
       // 制御文字チェック
-      if (/[\x00-\x1f\x7f]/.test(tag)) {
-        return `タグに制御文字が含まれています: "${tag}"`;
+      for (let i = 0; i < tag.length; i++) {
+        const charCode = tag.charCodeAt(i);
+        if ((charCode >= 0 && charCode <= 31) || charCode === 127) {
+          return `タグに制御文字が含まれています: "${tag}"`;
+        }
       }
     }
 
@@ -225,15 +228,15 @@
   });
 
   // キャプチャフェーズでキーイベントを処理してController側の処理を阻止
-  let keyHandler: (e: KeyboardEvent) => void;
-  let keyUpHandler: (e: KeyboardEvent) => void;
+  let keyHandler: (_e: KeyboardEvent) => void;
+  let keyUpHandler: (_e: KeyboardEvent) => void;
   onMount(() => {
     keyHandler = (e: KeyboardEvent) => {
       if (show) {
         handleKeydown(e);
       }
     };
-    keyUpHandler = (e: KeyboardEvent) => {
+    keyUpHandler = (_e: KeyboardEvent) => {
       if (show && ignoreNextInput) {
         // キーが離された時点で入力無視を解除（より早く反応させる）
         ignoreNextInput = false;

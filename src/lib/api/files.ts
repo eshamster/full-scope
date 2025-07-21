@@ -21,6 +21,6 @@ export async function getPrevImagePaths(): Promise<{ id: number; paths: string[]
 /**
  * 指定したファイルを削除します
  */
-export async function deleteFile(path: string): Promise<any> {
+export async function deleteFile(path: string): Promise<void> {
   return invoke('delete_file', { path });
 }

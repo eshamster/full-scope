@@ -114,18 +114,29 @@ export class ImageInfoManager {
 - 必要に応じてセマフォを使用した並行操作
 - ファイル操作は非同期で実行し、適切にエラーハンドリングを行う
 - **Rustファイル編集後**: `src-tauri` フォルダ配下で `cargo fmt` を実行してコードフォーマットを適用
-- **TODO**: hooks設定でRustファイル編集時の自動 `cargo fmt` 実行を設定する
+- **フロントエンドファイル編集後**: commit前に `npm run format` を実行してコードフォーマットを適用
+- **TODO**: hooks設定でファイル編集時の自動フォーマット実行を設定する（Rustは `cargo fmt`、フロントエンドは `npm run format`）
 
 ## ローカルテスト実行ガイドライン
 
 CI側でのエラー修正による手戻りを防ぐため、変更のcommit後に必要なテストをローカルで実行する：
 
 ### フロントエンドの変更時
+commit前に以下のコマンドを実行：
+
+```bash
+# コードフォーマット実行
+npm run format
+```
+
 commit後に以下のコマンドを順次実行：
 
 ```bash
 # 依存関係インストール（必要に応じて）
 pnpm install
+
+# ESLintチェック・修正
+npm run lint:fix
 
 # 型チェック
 npm run check

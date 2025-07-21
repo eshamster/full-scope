@@ -51,13 +51,13 @@
 
   type Props = {
     message: string;
-    onNotify: (result: boolean) => void;
+    onNotify: (_result: boolean) => void;
     show: boolean;
   };
 
   const { message, onNotify, show }: Props = $props();
 
-  let keyHandler: (e: KeyboardEvent) => void;
+  let keyHandler: (_e: KeyboardEvent) => void;
   onMount(() => {
     keyHandler = (e: KeyboardEvent) => {
       if (!show || !onNotify) return;
