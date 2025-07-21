@@ -1,0 +1,24 @@
+# Build outputs
+build/
+.svelte-kit/
+dist/
+target/
+
+# Dependencies
+node_modules/
+
+# Generated files
+.DS_Store
+*.log
+*.tmp
+
+# Tauri generated files
+src-tauri/target/
+
+# Coverage reports
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.production
