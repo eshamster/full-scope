@@ -132,9 +132,6 @@ npm run format
 commit後に以下のコマンドを順次実行：
 
 ```bash
-# 依存関係インストール（必要に応じて）
-pnpm install
-
 # ESLintチェック・修正
 npm run lint:fix
 

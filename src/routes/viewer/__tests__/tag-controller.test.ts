@@ -19,7 +19,7 @@ describe('TagController', () => {
       showToast: vi.fn(),
       isShow: vi.fn().mockReturnValue(false),
       getMessage: vi.fn().mockReturnValue(''),
-    } as ToastController;
+    } as unknown as ToastController;
 
     tagController = new TagController(mockToastController);
 

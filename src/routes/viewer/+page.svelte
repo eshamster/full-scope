@@ -242,8 +242,8 @@
     document.addEventListener('wheel', event => {
       handleWheel(event);
     });
-    document.addEventListener('mouseleave', event => {
-      handleMouseleave(event);
+    document.addEventListener('mouseleave', () => {
+      handleMouseleave();
     });
     document.addEventListener('contextmenu', event => {
       event.preventDefault();
