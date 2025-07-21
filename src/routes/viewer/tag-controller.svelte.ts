@@ -1,9 +1,10 @@
 import { loadTagsInDir, saveTags } from '@/lib/api/tags';
 import { ToastController } from './toast-controller.svelte';
+import { SvelteMap } from 'svelte/reactivity';
 
 export class TagController {
-  private tagsCache = new Map<string, Record<string, string[]>>();
-  
+  private tagsCache = new SvelteMap<string, Record<string, string[]>>();
+
   constructor(private toastController: ToastController) {}
 
   /**
@@ -14,14 +15,14 @@ export class TagController {
   public async getImageTags(imagePath: string): Promise<string[]> {
     const dirPath = this.getDirPath(imagePath);
     const fileName = this.getFileName(imagePath);
-    
+
     try {
       // キャッシュがあればそれを使用、なければAPIから取得
       if (!this.tagsCache.has(dirPath)) {
         const tagsMap = await loadTagsInDir(dirPath);
         this.tagsCache.set(dirPath, tagsMap);
       }
-      
+
       const tagsMap = this.tagsCache.get(dirPath)!;
       return tagsMap[fileName] || [];
     } catch (error) {
@@ -43,19 +44,19 @@ export class TagController {
       this.toastController.showToast(validationError);
       throw new Error(validationError);
     }
-    
+
     try {
       await saveTags(imagePath, tags);
-      
+
       // キャッシュを更新
       const dirPath = this.getDirPath(imagePath);
       const fileName = this.getFileName(imagePath);
-      
+
       if (this.tagsCache.has(dirPath)) {
         const tagsMap = this.tagsCache.get(dirPath)!;
         tagsMap[fileName] = tags;
       }
-      
+
       this.toastController.showToast('タグを保存しました');
     } catch (error) {
       console.error('Failed to save tags:', error);
@@ -105,8 +106,11 @@ export class TagController {
       }
 
       // 制御文字チェック
-      if (/[\x00-\x1f\x7f]/.test(tag)) {
-        return `タグに制御文字が含まれています: "${tag}"`;
+      for (let i = 0; i < tag.length; i++) {
+        const charCode = tag.charCodeAt(i);
+        if ((charCode >= 0 && charCode <= 31) || charCode === 127) {
+          return `タグに制御文字が含まれています: "${tag}"`;
+        }
       }
 
       // 先頭末尾空白チェック（ユーザビリティ向上）
@@ -127,10 +131,10 @@ export class TagController {
   // - アクセス頻度に基づくLRU削除
 
   private getDirPath(filePath: string): string {
-    return filePath.replace(/[^\\\/]*$/, '');
+    return filePath.replace(/[^\\/]*$/, '');
   }
 
   private getFileName(filePath: string): string {
-    return filePath.replace(/^.*[\\\/]/, '');
+    return filePath.replace(/^.*[\\/]/, '');
   }
 }

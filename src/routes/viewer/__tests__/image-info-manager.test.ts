@@ -18,7 +18,7 @@ describe('ImageInfoManager', () => {
   describe('addImages', () => {
     it('should add new images to the list', async () => {
       await manager.addImages(testImages);
-      
+
       expect(manager.getList()).toHaveLength(3);
       expect(manager.getList()[0].path).toBe('/path/to/image1.jpg');
       expect(manager.getList()[1].path).toBe('/path/to/image2.png');
@@ -28,19 +28,19 @@ describe('ImageInfoManager', () => {
     it('should prevent duplicate images', async () => {
       await manager.addImages(testImages);
       await manager.addImages([testImages[0], new ImageInfo('/path/to/image4.webp')]);
-      
+
       expect(manager.getList()).toHaveLength(4);
       expect(manager.getList().map(img => img.path)).toEqual([
         '/path/to/image1.jpg',
-        '/path/to/image2.png', 
+        '/path/to/image2.png',
         '/path/to/image3.gif',
-        '/path/to/image4.webp'
+        '/path/to/image4.webp',
       ]);
     });
 
     it('should handle empty array', async () => {
       await manager.addImages([]);
-      
+
       expect(manager.getList()).toHaveLength(0);
     });
   });
@@ -48,7 +48,7 @@ describe('ImageInfoManager', () => {
   describe('getCurrent', () => {
     it('should return current image', async () => {
       await manager.addImages(testImages);
-      
+
       const current = manager.getCurrent();
       expect(current.path).toBe('/path/to/image1.jpg');
     });
@@ -61,7 +61,7 @@ describe('ImageInfoManager', () => {
   describe('getCaret', () => {
     it('should return current position', async () => {
       await manager.addImages(testImages);
-      
+
       expect(manager.getCaret()).toBe(0);
     });
   });
@@ -74,7 +74,7 @@ describe('ImageInfoManager', () => {
     describe('gotoNext', () => {
       it('should move to next image', () => {
         manager.gotoNext();
-        
+
         expect(manager.getCaret()).toBe(1);
         expect(manager.getCurrent().path).toBe('/path/to/image2.png');
       });
@@ -82,21 +82,21 @@ describe('ImageInfoManager', () => {
       it('should wrap to first image at end', () => {
         manager.gotoAt(2); // Move to last image
         manager.gotoNext();
-        
+
         expect(manager.getCaret()).toBe(0);
         expect(manager.getCurrent().path).toBe('/path/to/image1.jpg');
       });
 
       it('should handle step parameter', () => {
         manager.gotoNext(2);
-        
+
         expect(manager.getCaret()).toBe(2);
         expect(manager.getCurrent().path).toBe('/path/to/image3.gif');
       });
 
       it('should clamp to last image when step exceeds bounds', () => {
         manager.gotoNext(10);
-        
+
         expect(manager.getCaret()).toBe(2);
         expect(manager.getCurrent().path).toBe('/path/to/image3.gif');
       });
@@ -106,14 +106,14 @@ describe('ImageInfoManager', () => {
       it('should move to previous image', () => {
         manager.gotoAt(1);
         manager.gotoPrev();
-        
+
         expect(manager.getCaret()).toBe(0);
         expect(manager.getCurrent().path).toBe('/path/to/image1.jpg');
       });
 
       it('should wrap to last image at beginning', () => {
         manager.gotoPrev();
-        
+
         expect(manager.getCaret()).toBe(2);
         expect(manager.getCurrent().path).toBe('/path/to/image3.gif');
       });
@@ -121,7 +121,7 @@ describe('ImageInfoManager', () => {
       it('should handle step parameter', () => {
         manager.gotoAt(2);
         manager.gotoPrev(2);
-        
+
         expect(manager.getCaret()).toBe(0);
         expect(manager.getCurrent().path).toBe('/path/to/image1.jpg');
       });
@@ -129,7 +129,7 @@ describe('ImageInfoManager', () => {
       it('should clamp to first image when step exceeds bounds', () => {
         manager.gotoAt(1);
         manager.gotoPrev(10);
-        
+
         expect(manager.getCaret()).toBe(0);
         expect(manager.getCurrent().path).toBe('/path/to/image1.jpg');
       });
@@ -139,15 +139,15 @@ describe('ImageInfoManager', () => {
       it('should not change position with single image', async () => {
         const singleManager = new ImageInfoManager();
         await singleManager.addImages([testImages[0]]);
-        
+
         singleManager.gotoRandom();
-        
+
         expect(singleManager.getCaret()).toBe(0);
       });
 
       it('should move to different position with multiple images', () => {
         const initialCaret = manager.getCaret();
-        
+
         // Try multiple times to ensure randomness works
         let moved = false;
         for (let i = 0; i < 10; i++) {
@@ -157,7 +157,7 @@ describe('ImageInfoManager', () => {
             break;
           }
         }
-        
+
         expect(moved).toBe(true);
       });
     });
@@ -165,7 +165,7 @@ describe('ImageInfoManager', () => {
     describe('gotoAt', () => {
       it('should move to specified position', () => {
         manager.gotoAt(1);
-        
+
         expect(manager.getCaret()).toBe(1);
         expect(manager.getCurrent().path).toBe('/path/to/image2.png');
       });
@@ -173,7 +173,7 @@ describe('ImageInfoManager', () => {
       it('should clamp to valid range', () => {
         manager.gotoAt(-1);
         expect(manager.getCaret()).toBe(0);
-        
+
         manager.gotoAt(10);
         expect(manager.getCaret()).toBe(2);
       });
@@ -187,7 +187,7 @@ describe('ImageInfoManager', () => {
 
     it('should bookmark current image', () => {
       manager.bookmarkCurrent();
-      
+
       expect(manager.getCurrent().isBookmarked()).toBe(true);
       expect(manager.countBookmarked()).toBe(1);
     });
@@ -195,7 +195,7 @@ describe('ImageInfoManager', () => {
     it('should toggle bookmark state', () => {
       manager.bookmarkCurrent();
       expect(manager.getCurrent().isBookmarked()).toBe(true);
-      
+
       manager.bookmarkCurrent();
       expect(manager.getCurrent().isBookmarked()).toBe(false);
       expect(manager.countBookmarked()).toBe(0);
@@ -205,13 +205,13 @@ describe('ImageInfoManager', () => {
       // Bookmark second image
       manager.gotoAt(1);
       manager.bookmarkCurrent();
-      
+
       // Go back to first image
       manager.gotoAt(0);
-      
+
       // Navigate to next bookmark
       manager.gotoNextBookmark();
-      
+
       expect(manager.getCaret()).toBe(1);
       expect(manager.getCurrent().isBookmarked()).toBe(true);
     });
@@ -220,13 +220,13 @@ describe('ImageInfoManager', () => {
       // Bookmark first image
       manager.gotoAt(0);
       manager.bookmarkCurrent();
-      
+
       // Move to last image
       manager.gotoAt(2);
-      
+
       // Navigate to next bookmark should wrap to first
       manager.gotoNextBookmark();
-      
+
       expect(manager.getCaret()).toBe(0);
     });
   });
@@ -239,9 +239,9 @@ describe('ImageInfoManager', () => {
     it('should delete current image', () => {
       const initialLength = manager.getList().length;
       const currentPath = manager.getCurrent().path;
-      
+
       manager.deleteCurrent();
-      
+
       expect(manager.getList()).toHaveLength(initialLength - 1);
       expect(manager.getList().find(img => img.path === currentPath)).toBeUndefined();
     });
@@ -249,7 +249,7 @@ describe('ImageInfoManager', () => {
     it('should maintain valid caret after deletion at end', () => {
       manager.gotoAt(2); // Move to last image
       manager.deleteCurrent();
-      
+
       // Caret should be adjusted to valid position
       expect(manager.getCaret()).toBe(1);
       expect(manager.getCurrent().path).toBe('/path/to/image2.png');
@@ -259,7 +259,7 @@ describe('ImageInfoManager', () => {
       manager.deleteCurrent();
       manager.deleteCurrent();
       manager.deleteCurrent();
-      
+
       expect(manager.getList()).toHaveLength(0);
       expect(() => manager.getCurrent()).toThrow('No images');
     });
@@ -268,10 +268,10 @@ describe('ImageInfoManager', () => {
   describe('edge cases', () => {
     it('should handle getCurrentList with count parameter', async () => {
       await manager.addImages(testImages);
-      
+
       expect(() => manager.getCurrentList(0)).toThrow('Invalid count');
       expect(() => manager.getCurrentList(-1)).toThrow('Invalid count');
-      
+
       const result = manager.getCurrentList(2);
       expect(result).toHaveLength(2);
       expect(result[0]!.path).toBe('/path/to/image1.jpg');
@@ -281,7 +281,7 @@ describe('ImageInfoManager', () => {
     it('should handle getCurrentList when count exceeds available images', async () => {
       await manager.addImages(testImages);
       manager.gotoAt(2);
-      
+
       const result = manager.getCurrentList(5);
       expect(result).toHaveLength(1); // Only one image from current position
       expect(result[0]!.path).toBe('/path/to/image3.gif');

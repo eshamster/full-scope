@@ -5,10 +5,7 @@ export class DialogController {
   private message: string = $state('');
   private callback: dialogCallback | null = null;
 
-  public showDialog(
-    message: string,
-    callback: dialogCallback,
-  ): void {
+  public showDialog(message: string, callback: dialogCallback): void {
     this.show = true;
     this.message = message;
     this.callback = callback;
@@ -19,7 +16,7 @@ export class DialogController {
       this.callback(result);
     }
     this.show = false;
-    this.message = "";
+    this.message = '';
     this.callback = null;
   }
 

@@ -1,25 +1,25 @@
-import { ImageInfoManager } from "./image-info-manager.svelte";
-import { DialogController } from "./dialog-controller.svelte";
-import { FileController } from "./file-controller";
-import { ToastController } from "./toast-controller.svelte";
-import { ViewerController } from "./viewer-controller.svelte";
+import { ImageInfoManager } from './image-info-manager.svelte';
+import { DialogController } from './dialog-controller.svelte';
+import { FileController } from './file-controller';
+import { ToastController } from './toast-controller.svelte';
+import { ViewerController } from './viewer-controller.svelte';
 
 export type Operation =
-  'next' |
-  'prev' |
-  'nextJump' |
-  'prevJump' |
-  'randomJump' |
-  'delete' |
-  'bookmark' |
-  'gotoBookmark' |
-  'nextHistory' |
-  'prevHistory' |
-  'incrementRows' |
-  'decrementRows' |
-  'incrementCols' |
-  'decrementCols' |
-  'editTags';
+  | 'next'
+  | 'prev'
+  | 'nextJump'
+  | 'prevJump'
+  | 'randomJump'
+  | 'delete'
+  | 'bookmark'
+  | 'gotoBookmark'
+  | 'nextHistory'
+  | 'prevHistory'
+  | 'incrementRows'
+  | 'decrementRows'
+  | 'incrementCols'
+  | 'decrementCols'
+  | 'editTags';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -55,7 +55,7 @@ const keyConfigs: keyConfig[] = [
   { key: 't', operation: 'editTags', modifierKeys: [] },
 ];
 
-  export class Controler {
+export class Controler {
   private keyToOperations = new Map<string, Operation>();
   private modfierKeyMap = new Map<ModifierKey, boolean>();
   private onEditTags?: () => void;
@@ -66,7 +66,7 @@ const keyConfigs: keyConfig[] = [
     private dialogController: DialogController,
     private fileController: FileController,
     private toastController: ToastController,
-    private viewerController: ViewerController,
+    private viewerController: ViewerController
   ) {
     this.readKeyConfigs(keyConfigs);
   }
@@ -92,7 +92,7 @@ const keyConfigs: keyConfig[] = [
   public operateByKey(rawKey: string): void {
     // modifierKeyの場合は何もしない
     if (['control', 'shift', 'alt'].includes(rawKey.toLowerCase())) {
-      return
+      return;
     }
 
     const key = this.keyToString(rawKey);
@@ -125,7 +125,7 @@ const keyConfigs: keyConfig[] = [
       case 'randomJump':
         this.imageInfoManager.gotoRandom();
         break;
-      case 'delete':
+      case 'delete': {
         const path = this.imageInfoManager.getCurrent().path;
         this.dialogController.showDialog(
           `本当に画像をゴミ箱に移動しますか？\n${path}`,
@@ -134,18 +134,21 @@ const keyConfigs: keyConfig[] = [
               this.imageInfoManager.deleteCurrent();
               this.fileController.deleteFile(path);
             }
-          });
+          }
+        );
         break;
-      case 'bookmark':
+      }
+      case 'bookmark': {
         const current = this.imageInfoManager.getCurrent();
         const count = this.imageInfoManager.countBookmarked();
-        const message = current.isBookmarked() ?
-          `ブックマークを解除しました: ${count}->${count - 1}` :
-          `ブックマークしました: ${count}->${count + 1}`;
+        const message = current.isBookmarked()
+          ? `ブックマークを解除しました: ${count}->${count - 1}`
+          : `ブックマークしました: ${count}->${count + 1}`;
         this.toastController.showToast(message);
 
         this.imageInfoManager.bookmarkCurrent();
         break;
+      }
       case 'gotoBookmark':
         this.imageInfoManager.gotoNextBookmark();
         break;
@@ -175,12 +178,8 @@ const keyConfigs: keyConfig[] = [
     }
   }
 
-  private keyToString(
-    key: string,
-    modifierKeys: ModifierKey[] = this.getModfierKeys(),
-  ): string {
-    const modified = modifierKeys.length === 0 ?
-      key : `${modifierKeys.join(',')}:${key}`;
+  private keyToString(key: string, modifierKeys: ModifierKey[] = this.getModfierKeys()): string {
+    const modified = modifierKeys.length === 0 ? key : `${modifierKeys.join(',')}:${key}`;
     return modified.toLowerCase();
   }
 

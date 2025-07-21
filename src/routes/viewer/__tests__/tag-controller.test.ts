@@ -19,10 +19,10 @@ describe('TagController', () => {
       showToast: vi.fn(),
       isShow: vi.fn().mockReturnValue(false),
       getMessage: vi.fn().mockReturnValue(''),
-    } as any;
+    } as unknown as ToastController;
 
     tagController = new TagController(mockToastController);
-    
+
     // モックをリセット
     vi.clearAllMocks();
   });
@@ -32,10 +32,9 @@ describe('TagController', () => {
       // Arrange
       const imagePath = 'D:\\images\\test\\photo.jpg';
       const expectedDirPath = 'D:\\images\\test\\';
-      const expectedFileName = 'photo.jpg';
       const mockTagsMap = {
         'photo.jpg': ['nature', 'landscape'],
-        'other.jpg': ['portrait']
+        'other.jpg': ['portrait'],
       };
 
       vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(mockTagsMap);
@@ -52,7 +51,7 @@ describe('TagController', () => {
       // Arrange
       const imagePath = 'D:\\images\\test\\new-photo.jpg';
       const mockTagsMap = {
-        'other.jpg': ['portrait']
+        'other.jpg': ['portrait'],
       };
 
       vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(mockTagsMap);
@@ -70,7 +69,7 @@ describe('TagController', () => {
       const imagePath2 = 'D:\\images\\test\\photo2.jpg';
       const mockTagsMap = {
         'photo1.jpg': ['tag1'],
-        'photo2.jpg': ['tag2']
+        'photo2.jpg': ['tag2'],
       };
 
       vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(mockTagsMap);
@@ -106,7 +105,7 @@ describe('TagController', () => {
       const tags = ['nature', 'sunset'];
 
       vi.mocked(tagsApi.saveTags).mockResolvedValue();
-      
+
       // 先にキャッシュを作成
       vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue({ 'photo.jpg': ['old'] });
       await tagController.getImageTags(imagePath);
@@ -117,7 +116,7 @@ describe('TagController', () => {
       // Assert
       expect(tagsApi.saveTags).toHaveBeenCalledWith(imagePath, tags);
       expect(mockToastController.showToast).toHaveBeenCalledWith('タグを保存しました');
-      
+
       // キャッシュが更新されているか確認
       const updatedTags = await tagController.getImageTags(imagePath);
       expect(updatedTags).toEqual(tags);
@@ -171,7 +170,6 @@ describe('TagController', () => {
     it('should clear specific directory cache', async () => {
       // Arrange
       const imagePath = 'D:\\images\\test\\photo.jpg';
-      const dirPath = 'D:\\images\\test';
       const mockTagsMap = { 'photo.jpg': ['test'] };
 
       vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(mockTagsMap);

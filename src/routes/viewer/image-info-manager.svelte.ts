@@ -1,6 +1,7 @@
 import { ImageInfo } from './image-info';
-import { Semaphore }  from 'await-semaphore';
+import { Semaphore } from 'await-semaphore';
 import { ImageShowHistory } from './image-show-history';
+import { SvelteSet } from 'svelte/reactivity';
 
 // NOTE: 一度に閲覧する画像の総数はタカが知れている想定なので
 // 探索が必要な場合はリストをリニアになめることとする
@@ -8,7 +9,7 @@ import { ImageShowHistory } from './image-show-history';
 
 export class ImageInfoManager {
   private list: ImageInfo[] = $state([]);
-  private pathSet: Set<string> = new Set();
+  private pathSet = new SvelteSet<string>();
   private semaphore = new Semaphore(1);
   private caret: number = $state(0);
   private history: ImageShowHistory = new ImageShowHistory();
@@ -81,7 +82,7 @@ export class ImageInfoManager {
       return;
     }
     // 現在位置を避けつつランダムに移動
-    let next = Math.floor(Math.random()* this.list.length - 1);
+    let next = Math.floor(Math.random() * this.list.length - 1);
     if (next >= this.caret) {
       next++;
     }
@@ -137,7 +138,7 @@ export class ImageInfoManager {
 
   public deleteCurrent(): void {
     const current = this.getCurrent();
-    this.list = this.list.filter((image) => image !== current);
+    this.list = this.list.filter(image => image !== current);
     this.pathSet.delete(current.path);
     this.setCaret(this.caret);
   }
@@ -148,7 +149,7 @@ export class ImageInfoManager {
     this.getCurrent().bookmark();
   }
   public countBookmarked(): number {
-    return this.list.filter((image) => image.isBookmarked()).length;
+    return this.list.filter(image => image.isBookmarked()).length;
   }
 
   // --- 補助 --- //
@@ -158,7 +159,7 @@ export class ImageInfoManager {
   }
 
   private findImageByPath(path: string): ImageInfo | null {
-    const index = this.list.findIndex((image) => image.path === path);
+    const index = this.list.findIndex(image => image.path === path);
     return index === -1 ? null : this.list[index];
   }
 }
