@@ -245,17 +245,17 @@ fn validate_and_parse_image_path(img_path: &str) -> Result<(String, String), Str
 
     // ファイルの存在確認
     if !path.exists() {
-        return Err(format!("{} does not exist", img_path));
+        return Err(format!("{img_path} does not exist"));
     }
 
     if !path.is_file() {
-        return Err(format!("{} is not a file", img_path));
+        return Err(format!("{img_path} is not a file"));
     }
 
     // パスの正規化（シンボリックリンクを解決し、. や .. を処理）
     let canonical_path = path
         .canonicalize()
-        .map_err(|e| format!("Failed to canonicalize path {}: {}", img_path, e))?;
+        .map_err(|e| format!("Failed to canonicalize path {img_path}: {e}"))?;
 
     // ディレクトリとファイル名を取得
     let dir_path = canonical_path
@@ -299,17 +299,17 @@ fn validate_directory_path(dir_path: &str) -> Result<String, String> {
 
     // ディレクトリの存在確認
     if !path.exists() {
-        return Err(format!("{} does not exist", dir_path));
+        return Err(format!("{dir_path} does not exist"));
     }
 
     if !path.is_dir() {
-        return Err(format!("{} is not a directory", dir_path));
+        return Err(format!("{dir_path} is not a directory"));
     }
 
     // パスの正規化（シンボリックリンクを解決し、. や .. を処理）
     let canonical_path = path
         .canonicalize()
-        .map_err(|e| format!("Failed to canonicalize directory path {}: {}", dir_path, e))?;
+        .map_err(|e| format!("Failed to canonicalize directory path {dir_path}: {e}"))?;
 
     let validated_path = canonical_path
         .to_str()
@@ -330,7 +330,7 @@ fn get_tag_file_names(dir_path: String) -> Result<(String, String), String> {
             tag_backup_file_name.to_str().unwrap().to_string(),
         ))
     } else {
-        Err(format!("{} is not exist or not a directory", dir_path))
+        Err(format!("{dir_path} is not exist or not a directory"))
     }
 }
 
@@ -360,7 +360,7 @@ fn save_tags(img_path: String, tags: Vec<String>) -> Result<(), String> {
         std::fs::File::create(tag_backup_file_name.clone()).expect("failed to create temp file");
     for (file_name, tags) in tags_map.get(&dir_path).unwrap() {
         let tags_str = tags.join(",");
-        let line = format!("{}\t{}\n", file_name, tags_str);
+        let line = format!("{file_name}\t{tags_str}\n");
         temp_file
             .write_all(line.as_bytes())
             .expect("failed to write to temp file");
