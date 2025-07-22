@@ -6,16 +6,16 @@ import { ImageInfo } from '../image-info';
 // APIモック
 vi.mock('$lib/api/tags', () => ({
   loadTagsInDir: vi.fn().mockResolvedValue({
-    'test.jpg': ['nature', 'landscape']
-  })
+    'test.jpg': ['nature', 'landscape'],
+  }),
 }));
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn().mockResolvedValue({
     size: 1024000,
     width: 1920,
-    height: 1080
-  })
+    height: 1080,
+  }),
 }));
 
 describe('ImageInfoDisplay', () => {
@@ -25,8 +25,8 @@ describe('ImageInfoDisplay', () => {
     render(ImageInfoDisplay, {
       props: {
         show: false,
-        imageInfo: mockImageInfo
-      }
+        imageInfo: mockImageInfo,
+      },
     });
 
     const overlay = screen.queryByTestId('image-info-overlay');
@@ -37,8 +37,8 @@ describe('ImageInfoDisplay', () => {
     render(ImageInfoDisplay, {
       props: {
         show: true,
-        imageInfo: null
-      }
+        imageInfo: null,
+      },
     });
 
     const overlay = screen.queryByTestId('image-info-overlay');
@@ -49,8 +49,8 @@ describe('ImageInfoDisplay', () => {
     render(ImageInfoDisplay, {
       props: {
         show: true,
-        imageInfo: mockImageInfo
-      }
+        imageInfo: mockImageInfo,
+      },
     });
 
     // formatFileSize関数のテスト
@@ -58,12 +58,12 @@ describe('ImageInfoDisplay', () => {
       const units = ['B', 'KB', 'MB', 'GB'];
       let size = bytes;
       let unitIndex = 0;
-      
+
       while (size >= 1024 && unitIndex < units.length - 1) {
         size /= 1024;
         unitIndex++;
       }
-      
+
       return `${size.toFixed(1)} ${units[unitIndex]}`;
     };
 

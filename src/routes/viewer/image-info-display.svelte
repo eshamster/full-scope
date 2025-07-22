@@ -113,7 +113,7 @@
 
   const infoItems = $derived.by(() => {
     if (!fileInfo) return [];
-    
+
     return [
       { label: 'ファイル名:', value: fileInfo.filename },
       { label: 'ファイルサイズ:', value: formatFileSize(fileInfo.fileSize) },

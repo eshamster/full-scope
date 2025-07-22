@@ -133,6 +133,9 @@ npm run format
 commit後に以下のコマンドを順次実行：
 
 ```bash
+# コードフォーマット確認
+npm run format
+
 # ESLintチェック・修正
 npm run lint:fix
 
