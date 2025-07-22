@@ -48,9 +48,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      - name: Cache system dependencies
+        id: cache-system-deps  
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: apt-cache-${{ runner.os }}-${{ hashFiles('.github/workflows/test.yml') }}
+          restore-keys: |
+            apt-cache-${{ runner.os }}-
+            
       - name: Install system dependencies
         run: |
-          sudo apt-get update
+          if [ "${{ steps.cache-system-deps.outputs.cache-hit }}" != "true" ]; then
+            sudo apt-get update
+          fi
           sudo apt-get install -y libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev
         
       - name: Setup Rust
