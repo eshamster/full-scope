@@ -273,7 +273,7 @@
              grid-template-columns: repeat({viewerController.getCols()}, 1fr);
              "
     >
-      {#each currentImages as img (img.path)}
+      {#each currentImages as img, i (i)}
         <div class="cell">
           <img id="image" src={convertFileSrc(img.path)} alt={img.path} />
         </div>
