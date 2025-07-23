@@ -1,34 +1,9 @@
 <style>
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
+  @import './modal-styles.css';
 
   .goto-dialog {
     width: 25%;
     min-width: 300px;
-    background-color: rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
-    border: 2px solid #333;
-  }
-
-  .content {
-    padding: 2em;
-    text-align: center;
-  }
-
-  .title {
-    font-size: 1.2rem;
-    margin-bottom: 15px;
-    font-weight: bold;
   }
 
   .input-section {
@@ -53,37 +28,6 @@
     font-size: 0.9rem;
     color: #666;
     margin-top: 5px;
-  }
-
-  .buttons {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-  }
-
-  .button {
-    font-size: 1rem;
-    border: 1px solid #333;
-    border-radius: 4px;
-    cursor: pointer;
-    padding: 8px 20px;
-    min-width: 80px;
-  }
-
-  .button.ok {
-    background-color: #ccffcc;
-  }
-
-  .button.ok:hover {
-    background-color: #99ff99;
-  }
-
-  .button.cancel {
-    background-color: #ffcccc;
-  }
-
-  .button.cancel:hover {
-    background-color: #ff9999;
   }
 </style>
 
@@ -151,9 +95,9 @@
 
 {#if controller.isShow()}
   <div class="modal-overlay">
-    <div class="goto-dialog">
-      <div class="content">
-        <div class="title">画像番号を指定</div>
+    <div class="goto-dialog modal-dialog">
+      <div class="modal-content">
+        <div class="modal-title">画像番号を指定</div>
         <div class="input-section">
           <input
             bind:this={inputElement}
@@ -168,9 +112,9 @@
           />
           <div class="range-text">1 - {controller.getMaxIndex()}</div>
         </div>
-        <div class="buttons">
-          <button class="button ok" onclick={handleSubmit}>OK</button>
-          <button class="button cancel" onclick={() => controller.handleDialogCancel()}
+        <div class="modal-buttons">
+          <button class="modal-button ok" onclick={handleSubmit}>OK</button>
+          <button class="modal-button cancel" onclick={() => controller.handleDialogCancel()}
             >Cancel</button
           >
         </div>
