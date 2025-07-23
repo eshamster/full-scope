@@ -3,6 +3,7 @@ import { DialogController } from './dialog-controller.svelte';
 import { FileController } from './file-controller';
 import { ToastController } from './toast-controller.svelte';
 import { ViewerController } from './viewer-controller.svelte';
+import { GotoDialogController } from './goto-dialog-controller.svelte';
 
 export type Operation =
   | 'next'
@@ -20,7 +21,8 @@ export type Operation =
   | 'incrementCols'
   | 'decrementCols'
   | 'editTags'
-  | 'toggleImageInfo';
+  | 'toggleImageInfo'
+  | 'goto';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -55,6 +57,7 @@ const keyConfigs: keyConfig[] = [
   { key: 'l', operation: 'decrementCols', modifierKeys: ['shift'] },
   { key: 't', operation: 'editTags', modifierKeys: [] },
   { key: 'i', operation: 'toggleImageInfo', modifierKeys: [] },
+  { key: 'g', operation: 'goto', modifierKeys: ['ctrl', 'shift'] },
 ];
 
 export class Controler {
@@ -68,7 +71,8 @@ export class Controler {
     private dialogController: DialogController,
     private fileController: FileController,
     private toastController: ToastController,
-    private viewerController: ViewerController
+    private viewerController: ViewerController,
+    private gotoDialogController: GotoDialogController
   ) {
     this.readKeyConfigs(keyConfigs);
   }
@@ -100,16 +104,25 @@ export class Controler {
     const key = this.keyToString(rawKey);
 
     const operation = this.keyToOperations.get(key);
-    // console.log(`key: ${key}, operation: ${operation}`); // debug
+    console.log(
+      `Controller operateByKey: key=${key}, operation=${operation}, gotoDialogShow=${this.gotoDialogController.isShow()}`
+    ); // debug
     if (operation) {
       this.operate(operation);
     }
   }
 
   private operate(operation: Operation): void {
-    if (this.dialogController.isShow() || this.isTagEditorOpen) {
+    if (
+      this.dialogController.isShow() ||
+      this.isTagEditorOpen ||
+      this.gotoDialogController.isShow()
+    ) {
+      console.log(`Controller operate: blocking operation=${operation} due to dialog open`); // debug
       return;
     }
+
+    console.log(`Controller operate: executing operation=${operation}`); // debug
 
     switch (operation) {
       case 'next':
@@ -180,6 +193,15 @@ export class Controler {
       case 'toggleImageInfo':
         this.imageInfoManager.toggleImageInfoDisplay();
         break;
+      case 'goto': {
+        const maxIndex = this.imageInfoManager.getList().length;
+        this.gotoDialogController.showDialog(maxIndex, (imageNumber: number | null) => {
+          if (imageNumber !== null) {
+            this.imageInfoManager.gotoAt(imageNumber);
+          }
+        });
+        break;
+      }
     }
   }
 

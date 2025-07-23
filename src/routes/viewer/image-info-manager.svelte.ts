@@ -89,8 +89,10 @@ export class ImageInfoManager {
     }
     this.setCaret(next, true);
   }
-  public gotoAt(value: number): void {
-    this.setCaret(value);
+  public gotoAt(imageNumber: number): void {
+    // 1ベースのインデックスを0ベースに変換
+    const index = imageNumber - 1;
+    this.setCaret(index, true);
   }
 
   public gotoNextBookmark(): void {
