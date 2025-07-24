@@ -1,6 +1,7 @@
 import { loadTagsInDir, saveTags } from '@/lib/api/tags';
 import { ToastController } from './toast-controller.svelte';
 import { SvelteMap } from 'svelte/reactivity';
+import { getDirPath, getFileName } from './path-utils';
 
 export class TagController {
   private tagsCache = new SvelteMap<string, Record<string, string[]>>();
@@ -13,8 +14,8 @@ export class TagController {
    * @returns タグの配列
    */
   public async getImageTags(imagePath: string): Promise<string[]> {
-    const dirPath = this.getDirPath(imagePath);
-    const fileName = this.getFileName(imagePath);
+    const dirPath = getDirPath(imagePath);
+    const fileName = getFileName(imagePath);
 
     try {
       // キャッシュがあればそれを使用、なければAPIから取得
@@ -49,8 +50,8 @@ export class TagController {
       await saveTags(imagePath, tags);
 
       // キャッシュを更新
-      const dirPath = this.getDirPath(imagePath);
-      const fileName = this.getFileName(imagePath);
+      const dirPath = getDirPath(imagePath);
+      const fileName = getFileName(imagePath);
 
       if (this.tagsCache.has(dirPath)) {
         const tagsMap = this.tagsCache.get(dirPath)!;
@@ -129,12 +130,4 @@ export class TagController {
   // - 最大キャッシュエントリ数: 100ディレクトリ
   // - TTL: 30分
   // - アクセス頻度に基づくLRU削除
-
-  private getDirPath(filePath: string): string {
-    return filePath.replace(/[^\\/]*$/, '');
-  }
-
-  private getFileName(filePath: string): string {
-    return filePath.replace(/^.*[\\/]/, '');
-  }
 }

@@ -74,8 +74,10 @@
   import { FileController } from '@/routes/viewer/file-controller';
   import { ToastController } from '@/routes/viewer/toast-controller.svelte';
   import { ViewerController } from '@/routes/viewer/viewer-controller.svelte';
+  import { GotoDialogController } from '@/routes/viewer/goto-dialog-controller.svelte';
   import { Controler } from '@/routes/viewer/controller';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import GotoDialog from './GotoDialog.svelte';
   import CornerToast from '@/routes/viewer/CornerToast.svelte';
   import TagEditor from './TagEditor.svelte';
   import { TagController } from './tag-controller.svelte';
@@ -90,6 +92,7 @@
 
   let manager = $state<ImageInfoManager>(new ImageInfoManager());
   const dialogController = new DialogController();
+  const gotoDialogController = new GotoDialogController();
   const fileController = new FileController();
   const toastController = new ToastController();
   const viewerController = new ViewerController();
@@ -99,7 +102,8 @@
     dialogController,
     fileController,
     toastController,
-    viewerController
+    viewerController,
+    gotoDialogController
   );
 
   // タグ編集用の状態
@@ -152,9 +156,25 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
+    console.log(
+      'Page handleKeydown:',
+      event.key,
+      'target:',
+      (event.target as HTMLElement)?.tagName,
+      'gotoDialogShow:',
+      gotoDialogController.isShow()
+    ); // デバッグログ
+
     if (event.key === 'Escape') {
       getCurrentWindow().close();
     }
+
+    // 開発者ツール（Ctrl+Shift+I）のみ許可、それ以外のWebViewデフォルトショートカットは無効化
+    if (!(event.ctrlKey && event.shiftKey && event.key === 'I')) {
+      console.log('Page handleKeydown: calling preventDefault for', event.key); // デバッグログ
+      event.preventDefault();
+    }
+
     switch (event.key.toLowerCase()) {
       case 'shift':
         controller.downModifierKey('shift');
@@ -286,6 +306,8 @@
     message={dialogController.getMessage()}
     onNotify={(result: boolean) => dialogController.handleDialogNotify(result)}
   ></ConfirmDialog>
+
+  <GotoDialog controller={gotoDialogController}></GotoDialog>
 
   <CornerToast show={toastController.isShow()} message={toastController.getMessage()}></CornerToast>
 

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Controler } from '../controller';
 import { ImageInfoManager } from '../image-info-manager.svelte';
 import { DialogController } from '../dialog-controller.svelte';
+import { GotoDialogController } from '../goto-dialog-controller.svelte';
 import { FileController } from '../file-controller';
 import { ToastController } from '../toast-controller.svelte';
 import { ViewerController } from '../viewer-controller.svelte';
@@ -10,6 +11,7 @@ describe('Controller - Image Info Display', () => {
   let controller: Controler;
   let imageInfoManager: ImageInfoManager;
   let dialogController: DialogController;
+  let gotoDialogController: GotoDialogController;
   let fileController: FileController;
   let toastController: ToastController;
   let viewerController: ViewerController;
@@ -17,6 +19,7 @@ describe('Controller - Image Info Display', () => {
   beforeEach(() => {
     imageInfoManager = new ImageInfoManager();
     dialogController = new DialogController();
+    gotoDialogController = new GotoDialogController();
     fileController = new FileController();
     toastController = new ToastController();
     viewerController = new ViewerController();
@@ -26,7 +29,8 @@ describe('Controller - Image Info Display', () => {
       dialogController,
       fileController,
       toastController,
-      viewerController
+      viewerController,
+      gotoDialogController
     );
 
     // ImageInfoManagerのメソッドをモック

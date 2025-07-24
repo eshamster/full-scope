@@ -36,6 +36,7 @@
   import type { ImageInfo } from './image-info';
   import { loadTagsInDir } from '$lib/api/tags';
   import { invoke } from '@tauri-apps/api/core';
+  import { getDirPath, getFileName } from './path-utils';
 
   interface Props {
     imageInfo: ImageInfo | null;
@@ -57,11 +58,8 @@
   // NOTE: 応答速度に課題がある場合は、ファイル情報のキャッシュ機能を検討する
   async function loadFileInfo(imagePath: string) {
     try {
-      // ファイル名を取得（TagControllerと同じ方式）
-      const filename = imagePath.replace(/^.*[\\/]/, '');
-
-      // ディレクトリパスを取得してタグ情報をロード（TagControllerと同じ方式）
-      const dirPath = imagePath.replace(/[^\\/]*$/, '');
+      const filename = getFileName(imagePath);
+      const dirPath = getDirPath(imagePath);
       const tagsData = await loadTagsInDir(dirPath);
       const tags = tagsData[filename] || [];
 

@@ -80,7 +80,7 @@ describe('ImageInfoManager', () => {
       });
 
       it('should wrap to first image at end', () => {
-        manager.gotoAt(2); // Move to last image
+        manager.gotoAt(3); // Move to last image
         manager.gotoNext();
 
         expect(manager.getCaret()).toBe(0);
@@ -104,7 +104,7 @@ describe('ImageInfoManager', () => {
 
     describe('gotoPrev', () => {
       it('should move to previous image', () => {
-        manager.gotoAt(1);
+        manager.gotoAt(2);
         manager.gotoPrev();
 
         expect(manager.getCaret()).toBe(0);
@@ -119,7 +119,7 @@ describe('ImageInfoManager', () => {
       });
 
       it('should handle step parameter', () => {
-        manager.gotoAt(2);
+        manager.gotoAt(3);
         manager.gotoPrev(2);
 
         expect(manager.getCaret()).toBe(0);
@@ -127,7 +127,7 @@ describe('ImageInfoManager', () => {
       });
 
       it('should clamp to first image when step exceeds bounds', () => {
-        manager.gotoAt(1);
+        manager.gotoAt(2);
         manager.gotoPrev(10);
 
         expect(manager.getCaret()).toBe(0);
@@ -164,17 +164,17 @@ describe('ImageInfoManager', () => {
 
     describe('gotoAt', () => {
       it('should move to specified position', () => {
-        manager.gotoAt(1);
+        manager.gotoAt(2); // 1-based: move to 2nd image (index 1)
 
         expect(manager.getCaret()).toBe(1);
         expect(manager.getCurrent().path).toBe('/path/to/image2.png');
       });
 
       it('should clamp to valid range', () => {
-        manager.gotoAt(-1);
+        manager.gotoAt(0); // invalid: should go to 1st image
         expect(manager.getCaret()).toBe(0);
 
-        manager.gotoAt(10);
+        manager.gotoAt(10); // beyond range: should go to last image
         expect(manager.getCaret()).toBe(2);
       });
     });
@@ -203,11 +203,11 @@ describe('ImageInfoManager', () => {
 
     it('should navigate to next bookmark', () => {
       // Bookmark second image
-      manager.gotoAt(1);
+      manager.gotoAt(2);
       manager.bookmarkCurrent();
 
       // Go back to first image
-      manager.gotoAt(0);
+      manager.gotoAt(1);
 
       // Navigate to next bookmark
       manager.gotoNextBookmark();
@@ -218,11 +218,11 @@ describe('ImageInfoManager', () => {
 
     it('should wrap around when searching for bookmarks', () => {
       // Bookmark first image
-      manager.gotoAt(0);
+      manager.gotoAt(1);
       manager.bookmarkCurrent();
 
       // Move to last image
-      manager.gotoAt(2);
+      manager.gotoAt(3);
 
       // Navigate to next bookmark should wrap to first
       manager.gotoNextBookmark();
@@ -247,7 +247,7 @@ describe('ImageInfoManager', () => {
     });
 
     it('should maintain valid caret after deletion at end', () => {
-      manager.gotoAt(2); // Move to last image
+      manager.gotoAt(3); // Move to last image
       manager.deleteCurrent();
 
       // Caret should be adjusted to valid position
@@ -280,7 +280,7 @@ describe('ImageInfoManager', () => {
 
     it('should handle getCurrentList when count exceeds available images', async () => {
       await manager.addImages(testImages);
-      manager.gotoAt(2);
+      manager.gotoAt(3);
 
       const result = manager.getCurrentList(5);
       expect(result).toHaveLength(1); // Only one image from current position
