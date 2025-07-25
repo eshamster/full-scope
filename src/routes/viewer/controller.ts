@@ -4,6 +4,7 @@ import { FileController } from './file-controller';
 import { ToastController } from './toast-controller.svelte';
 import { ViewerController } from './viewer-controller.svelte';
 import { GotoDialogController } from './goto-dialog-controller.svelte';
+import { FilterDialogController } from './filter-dialog-controller.svelte';
 
 export type Operation =
   | 'next'
@@ -22,7 +23,8 @@ export type Operation =
   | 'decrementCols'
   | 'editTags'
   | 'toggleImageInfo'
-  | 'goto';
+  | 'goto'
+  | 'filterByTag';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -58,6 +60,7 @@ const keyConfigs: keyConfig[] = [
   { key: 't', operation: 'editTags', modifierKeys: [] },
   { key: 'i', operation: 'toggleImageInfo', modifierKeys: [] },
   { key: 'g', operation: 'goto', modifierKeys: ['ctrl', 'shift'] },
+  { key: 't', operation: 'filterByTag', modifierKeys: ['ctrl', 'shift'] },
 ];
 
 export class Controler {
@@ -72,7 +75,8 @@ export class Controler {
     private fileController: FileController,
     private toastController: ToastController,
     private viewerController: ViewerController,
-    private gotoDialogController: GotoDialogController
+    private gotoDialogController: GotoDialogController,
+    private filterDialogController: FilterDialogController
   ) {
     this.readKeyConfigs(keyConfigs);
   }
@@ -116,7 +120,8 @@ export class Controler {
     if (
       this.dialogController.isShow() ||
       this.isTagEditorOpen ||
-      this.gotoDialogController.isShow()
+      this.gotoDialogController.isShow() ||
+      this.filterDialogController.isShow()
     ) {
       console.log(`Controller operate: blocking operation=${operation} due to dialog open`); // debug
       return;
@@ -202,6 +207,9 @@ export class Controler {
         });
         break;
       }
+      case 'filterByTag':
+        this.filterDialogController.showDialog();
+        break;
     }
   }
 

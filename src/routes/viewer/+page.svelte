@@ -75,9 +75,11 @@
   import { ToastController } from '@/routes/viewer/toast-controller.svelte';
   import { ViewerController } from '@/routes/viewer/viewer-controller.svelte';
   import { GotoDialogController } from '@/routes/viewer/goto-dialog-controller.svelte';
+  import { FilterDialogController } from '@/routes/viewer/filter-dialog-controller.svelte';
   import { Controler } from '@/routes/viewer/controller';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import GotoDialog from './GotoDialog.svelte';
+  import FilterByTagDialog from './FilterByTagDialog.svelte';
   import CornerToast from '@/routes/viewer/CornerToast.svelte';
   import TagEditor from './TagEditor.svelte';
   import { TagController } from './tag-controller.svelte';
@@ -93,6 +95,7 @@
   let manager = $state<ImageInfoManager>(new ImageInfoManager());
   const dialogController = new DialogController();
   const gotoDialogController = new GotoDialogController();
+  const filterDialogController = new FilterDialogController(manager);
   const fileController = new FileController();
   const toastController = new ToastController();
   const viewerController = new ViewerController();
@@ -103,8 +106,12 @@
     fileController,
     toastController,
     viewerController,
-    gotoDialogController
+    gotoDialogController,
+    filterDialogController
   );
+
+  // ImageInfoManagerにTagControllerを設定
+  manager.setTagController(tagController);
 
   // タグ編集用の状態
   let showTagEditor = $state(false);
@@ -281,9 +288,9 @@
 </script>
 
 <main class="container">
-  {#if manager.getList().length > 0}
+  {#if manager.getListLength() > 0}
     <div id="page">
-      {manager.getCaret() + 1} / {manager.getList().length}
+      {manager.getCaret() + 1} / {manager.getListLength()}
     </div>
     <div id="debug"></div>
     <div
@@ -309,11 +316,13 @@
 
   <GotoDialog controller={gotoDialogController}></GotoDialog>
 
+  <FilterByTagDialog controller={filterDialogController}></FilterByTagDialog>
+
   <CornerToast show={toastController.isShow()} message={toastController.getMessage()}></CornerToast>
 
   <TagEditor
     show={showTagEditor}
-    imagePath={manager.getList().length > 0 ? manager.getCurrent().path : ''}
+    imagePath={manager.getListLength() > 0 ? manager.getCurrent().path : ''}
     initialTags={currentImageTags}
     onSave={handleTagSave}
     onCancel={handleTagCancel}
@@ -321,6 +330,6 @@
 
   <ImageInfoDisplay
     show={manager.isImageInfoDisplayed()}
-    imageInfo={manager.getList().length > 0 ? manager.getCurrent() : null}
+    imageInfo={manager.getListLength() > 0 ? manager.getCurrent() : null}
   ></ImageInfoDisplay>
 </main>

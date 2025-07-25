@@ -41,7 +41,7 @@ describe('ImageInfoManager', () => {
     it('should handle empty array', async () => {
       await manager.addImages([]);
 
-      expect(manager.getList()).toHaveLength(0);
+      expect(manager.getListLength()).toBe(0);
     });
   });
 
@@ -237,7 +237,7 @@ describe('ImageInfoManager', () => {
     });
 
     it('should delete current image', () => {
-      const initialLength = manager.getList().length;
+      const initialLength = manager.getListLength();
       const currentPath = manager.getCurrent().path;
 
       manager.deleteCurrent();
@@ -260,7 +260,7 @@ describe('ImageInfoManager', () => {
       manager.deleteCurrent();
       manager.deleteCurrent();
 
-      expect(manager.getList()).toHaveLength(0);
+      expect(manager.getListLength()).toBe(0);
       expect(() => manager.getCurrent()).toThrow('No images');
     });
   });
