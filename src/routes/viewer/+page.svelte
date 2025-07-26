@@ -41,6 +41,13 @@
     height: 100%;
     object-fit: contain;
     object-position: center;
+    /* ドラッグ操作を無効化 */
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
   }
 
   #debug {
@@ -211,9 +218,12 @@
   }
 
   function handleMouseDown(event: MouseEvent) {
+    // ドラッグ操作を無効化
+    event.preventDefault();
+
     switch (event.button) {
       case 0:
-        // 左クリックはshiftキー扱い
+        // 左クリックはshiftキー扱い（ドラッグを無効化しているのでクリック時のみ）
         controller.downModifierKey('shift');
         break;
       case 1:
