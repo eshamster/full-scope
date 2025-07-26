@@ -46,7 +46,6 @@
     -khtml-user-drag: none;
     -moz-user-drag: none;
     -o-user-drag: none;
-    user-drag: none;
     pointer-events: none;
   }
 
@@ -334,6 +333,7 @@
     show={showTagEditor}
     imagePath={manager.getListLength() > 0 ? manager.getCurrent().path : ''}
     initialTags={currentImageTags}
+    imageInfoManager={manager}
     onSave={handleTagSave}
     onCancel={handleTagCancel}
   ></TagEditor>

@@ -97,6 +97,60 @@
   .cancel-button:hover {
     background-color: #545b62;
   }
+
+  .easy-input-container {
+    margin-bottom: 1.5em;
+    padding: 1em;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fafafa;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .easy-input-title {
+    font-weight: bold;
+    margin-bottom: 0.5em;
+    color: #333;
+    font-size: 0.9em;
+  }
+
+  .tag-button {
+    padding: 6px 12px;
+    margin: 3px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 13px;
+    transition: all 0.2s ease;
+    display: inline-block;
+    user-select: none;
+  }
+
+  .tag-button.unselected {
+    border: 1px solid black;
+    background: white;
+    color: black;
+  }
+
+  .tag-button.selected {
+    border: none;
+    background: black;
+    color: white;
+  }
+
+  .no-available-tags {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 10px;
+    font-size: 0.85em;
+  }
+
+  .focus-hint {
+    font-size: 0.8em;
+    color: #666;
+    margin-bottom: 0.5em;
+  }
 </style>
 
 <script lang="ts">
@@ -106,21 +160,26 @@
     show: boolean;
     imagePath: string;
     initialTags: string[];
+    imageInfoManager?: import('./image-info-manager.svelte').ImageInfoManager;
     onSave: (_tags: string[]) => void;
     onCancel: () => void;
   };
 
-  const { show, imagePath, initialTags, onSave, onCancel }: Props = $props();
+  const { show, imagePath, initialTags, imageInfoManager, onSave, onCancel }: Props = $props();
 
   let tagsText = $state('');
-  let textAreaElement = $state<HTMLTextAreaElement>();
-  let ignoreNextInput = $state(false);
+  let textAreaElement = $state<HTMLTextAreaElement | undefined>(undefined);
+  let ignoreNextInput = false;
   let validationError = $state<string | null>(null);
+  let isEasyInputMode = $state(true); // 簡易入力モード（true）か自由入力モード（false）か
+  let availableTags = $state<string[]>([]); // 利用可能なタグ一覧
+  let isLoadingTags = false; // タグ読み込み中フラグ
 
   // タグ配列をカンマ区切り文字列に変換
   $effect(() => {
     if (show) {
       tagsText = initialTags.join(', ');
+      isEasyInputMode = true; // ダイアログを開いた時は簡易入力モード
       // エディタを開いた直後の入力を一時的に無視
       ignoreNextInput = true;
       setTimeout(() => {
@@ -128,6 +187,90 @@
       }, 100); // 100ms後に入力を受け付ける
     }
   });
+
+  // ダイアログ表示時に利用可能タグを取得
+  $effect(() => {
+    if (show && imageInfoManager && !isLoadingTags) {
+      // 非同期処理を分離して実行
+      loadAvailableTags();
+    } else if (!show) {
+      // ダイアログが非表示になったらクリア
+      availableTags = [];
+      isLoadingTags = false;
+    }
+  });
+
+  // 利用可能なタグを取得する関数
+  function loadAvailableTags(): void {
+    if (!imageInfoManager || isLoadingTags) {
+      return;
+    }
+
+    isLoadingTags = true;
+    imageInfoManager
+      .getAvailableTags()
+      .then(tags => {
+        // showがまだtrueの場合のみ更新
+        if (show) {
+          availableTags = tags;
+        }
+        isLoadingTags = false;
+      })
+      .catch(error => {
+        console.error('Failed to load available tags:', error);
+        if (show) {
+          availableTags = [];
+        }
+        isLoadingTags = false;
+      });
+  }
+
+  // 現在の入力からタグ配列を取得（キャッシュされた結果）
+  const currentTags = $derived(
+    tagsText
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0)
+  );
+
+  // 現在のタグセット（高速検索用）
+  const currentTagsSet = $derived(new Set(currentTags));
+
+  // タグがすでに入力済みかチェック
+  function isTagAlreadyAdded(tag: string): boolean {
+    return currentTagsSet.has(tag);
+  }
+
+  // タグボタンクリック時の処理
+  function handleTagButtonClick(tag: string): void {
+    if (isTagAlreadyAdded(tag)) {
+      // 既に追加済みの場合は削除
+      const filteredTags = currentTags.filter(t => t !== tag);
+      tagsText = filteredTags.join(', ');
+    } else {
+      // 未追加の場合は追加
+      const newTags = [...currentTags, tag];
+      tagsText = newTags.join(', ');
+    }
+  }
+
+  // 頭文字タイプによるタグ追加
+  function handleHeadCharType(char: string): void {
+    const lowerChar = char.toLowerCase();
+
+    // 指定された頭文字で始まるタグをソート順で取得
+    const matchingTags = availableTags
+      .filter(tag => tag.toLowerCase().startsWith(lowerChar))
+      .sort();
+
+    // 未入力のタグから最初のものを選択
+    const tagToAdd = matchingTags.find(tag => !currentTagsSet.has(tag));
+
+    if (tagToAdd) {
+      const newTags = [...currentTags, tagToAdd];
+      tagsText = newTags.join(', ');
+    }
+  }
 
   function handleKeydown(event: KeyboardEvent) {
     if (!show) return;
@@ -140,6 +283,23 @@
       event.preventDefault();
       event.stopPropagation();
       handleCancel();
+    } else if (event.key === 'Tab') {
+      // Tabキーで自由入力欄にフォーカス移動
+      event.preventDefault();
+      event.stopPropagation();
+      isEasyInputMode = false;
+      if (textAreaElement) {
+        textAreaElement.focus();
+      }
+    } else if (isEasyInputMode && /^[a-zA-Z0-9]$/.test(event.key)) {
+      // 簡易入力モードでの頭文字タイプ
+      event.preventDefault();
+      event.stopPropagation();
+
+      // 開始直後の文字入力を無視（Tキーの重複入力防止）
+      if (!ignoreNextInput) {
+        handleHeadCharType(event.key);
+      }
     } else {
       // タグエディタ表示中は他のキー操作も阻止
       event.stopPropagation();
@@ -183,49 +343,46 @@
     return null;
   }
 
-  // リアルタイムバリデーション
+  // リアルタイムバリデーション（$derivedで最適化）
   $effect(() => {
     if (!show || tagsText.length === 0) {
       validationError = null;
-      return;
+    } else {
+      validationError = validateTags(currentTags);
     }
-
-    const tags = tagsText
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0);
-
-    validationError = validateTags(tags);
   });
 
   function handleSave() {
-    // カンマ区切りテキストをタグ配列に変換（空文字除去、トリム）
-    const tags = tagsText
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0);
-
-    // 保存前の最終検証
-    const error = validateTags(tags);
+    // 保存前の最終検証（既にcurrentTagsで計算済み）
+    const error = validateTags(currentTags);
     if (error) {
       validationError = error;
       return;
     }
 
-    onSave(tags);
+    onSave(currentTags);
   }
 
   function handleCancel() {
     onCancel();
   }
 
-  // モーダル表示時にテキストエリアにフォーカス
+  // モーダル表示時の初期フォーカス設定（簡易入力モードでは不要）
   $effect(() => {
-    if (show && textAreaElement) {
+    if (show && !isEasyInputMode && textAreaElement) {
       textAreaElement.focus();
       textAreaElement.select();
     }
   });
+
+  // テキストエリアのフォーカス/ブラー処理
+  function handleTextAreaFocus(): void {
+    isEasyInputMode = false;
+  }
+
+  function handleTextAreaBlur(): void {
+    // テキストエリアからフォーカスが外れても自由入力モードは維持
+  }
 
   // キャプチャフェーズでキーイベントを処理してController側の処理を阻止
   let keyHandler: (_e: KeyboardEvent) => void;
@@ -267,6 +424,34 @@
       <div class="image-path">
         {imagePath}
       </div>
+      <!-- 簡易入力補助パート -->
+      {#if availableTags.length > 0}
+        <div class="easy-input-container">
+          <div class="easy-input-title">既存タグから選択:</div>
+          {#each availableTags as tag (tag)}
+            <button
+              class="tag-button {isTagAlreadyAdded(tag) ? 'selected' : 'unselected'}"
+              onclick={() => handleTagButtonClick(tag)}
+              type="button"
+            >
+              {tag}
+            </button>
+          {/each}
+        </div>
+      {:else}
+        <div class="easy-input-container">
+          <div class="no-available-tags">利用可能なタグがありません</div>
+        </div>
+      {/if}
+
+      <div class="focus-hint">
+        {#if isEasyInputMode}
+          頭文字をタイプしてタグを追加、Tabで自由入力欄へ移動
+        {:else}
+          自由入力モード - 直接編集できます
+        {/if}
+      </div>
+
       <textarea
         bind:this={textAreaElement}
         bind:value={tagsText}
@@ -277,6 +462,9 @@
             tagsText = initialTags.join(', ');
           }
         }}
+        onfocus={handleTextAreaFocus}
+        onclick={handleTextAreaFocus}
+        onblur={handleTextAreaBlur}
         placeholder="タグをカンマ区切りで入力してください"
         rows="4"
         cols="50"
