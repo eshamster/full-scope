@@ -38,8 +38,10 @@ type keyConfig = {
 const keyConfigs: keyConfig[] = [
   { key: 'ArrowRight', operation: 'next', modifierKeys: [] },
   { key: 'WheelDown', operation: 'next', modifierKeys: [] },
+  { key: 'x', operation: 'next', modifierKeys: [] },
   { key: 'ArrowLeft', operation: 'prev', modifierKeys: [] },
   { key: 'WheelUp', operation: 'prev', modifierKeys: [] },
+  { key: 'z', operation: 'prev', modifierKeys: [] },
   { key: 'ArrowDown', operation: 'nextJump', modifierKeys: [] },
   { key: 'WheelDown', operation: 'nextJump', modifierKeys: ['shift'] },
   { key: 'ArrowUp', operation: 'prevJump', modifierKeys: [] },
