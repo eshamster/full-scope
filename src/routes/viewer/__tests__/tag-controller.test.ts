@@ -212,4 +212,156 @@ describe('TagController', () => {
       expect(tagsApi.loadTagsInDir).toHaveBeenCalledTimes(4);
     });
   });
+
+  describe('loadTagsInDir', () => {
+    it('should load and cache tags for directory', async () => {
+      // Arrange
+      const dirPath = '/test/directory/';
+      const mockTagsMap = {
+        'image1.jpg': ['nature', 'landscape'],
+        'image2.png': ['portrait', 'people'],
+      };
+
+      vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(mockTagsMap);
+
+      // Act
+      const result = await tagController.loadTagsInDir(dirPath);
+
+      // Assert
+      expect(result).toEqual(mockTagsMap);
+      expect(tagsApi.loadTagsInDir).toHaveBeenCalledWith(dirPath);
+      expect(tagsApi.loadTagsInDir).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return cached data on subsequent calls', async () => {
+      // Arrange
+      const dirPath = '/test/directory/';
+      const mockTagsMap = {
+        'image1.jpg': ['nature', 'landscape'],
+      };
+
+      vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(mockTagsMap);
+
+      // Act - 最初の呼び出し
+      await tagController.loadTagsInDir(dirPath);
+      // Act - 2回目の呼び出し
+      const result = await tagController.loadTagsInDir(dirPath);
+
+      // Assert
+      expect(result).toEqual(mockTagsMap);
+      expect(tagsApi.loadTagsInDir).toHaveBeenCalledTimes(1); // キャッシュから取得
+    });
+
+    it('should handle different directories separately', async () => {
+      // Arrange
+      const dirPath1 = '/test/directory1/';
+      const dirPath2 = '/test/directory2/';
+      const mockTagsMap1 = { 'image1.jpg': ['nature'] };
+      const mockTagsMap2 = { 'image2.jpg': ['portrait'] };
+
+      vi.mocked(tagsApi.loadTagsInDir)
+        .mockResolvedValueOnce(mockTagsMap1)
+        .mockResolvedValueOnce(mockTagsMap2);
+
+      // Act
+      const result1 = await tagController.loadTagsInDir(dirPath1);
+      const result2 = await tagController.loadTagsInDir(dirPath2);
+
+      // Assert
+      expect(result1).toEqual(mockTagsMap1);
+      expect(result2).toEqual(mockTagsMap2);
+      expect(tagsApi.loadTagsInDir).toHaveBeenCalledTimes(2);
+      expect(tagsApi.loadTagsInDir).toHaveBeenNthCalledWith(1, dirPath1);
+      expect(tagsApi.loadTagsInDir).toHaveBeenNthCalledWith(2, dirPath2);
+    });
+
+    it('should handle API error gracefully', async () => {
+      // Arrange
+      const dirPath = '/test/directory/';
+      const errorMessage = 'Directory not found';
+
+      vi.mocked(tagsApi.loadTagsInDir).mockRejectedValue(new Error(errorMessage));
+      const showToastSpy = vi.spyOn(mockToastController, 'showToast');
+
+      // Act
+      const result = await tagController.loadTagsInDir(dirPath);
+
+      // Assert
+      expect(result).toEqual({});
+      expect(showToastSpy).toHaveBeenCalledWith('ディレクトリのタグ読み込みに失敗しました');
+    });
+
+    it('should handle empty directory results', async () => {
+      // Arrange
+      const dirPath = '/empty/directory/';
+      const emptyTagsMap = {};
+
+      vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(emptyTagsMap);
+
+      // Act
+      const result = await tagController.loadTagsInDir(dirPath);
+
+      // Assert
+      expect(result).toEqual({});
+      expect(tagsApi.loadTagsInDir).toHaveBeenCalledWith(dirPath);
+    });
+
+    it('should integrate with cache clearing methods', async () => {
+      // Arrange
+      const dirPath = '/test/directory/';
+      const mockTagsMap = { 'image1.jpg': ['nature'] };
+
+      vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(mockTagsMap);
+
+      // Act - 初回読み込み
+      await tagController.loadTagsInDir(dirPath);
+      expect(tagsApi.loadTagsInDir).toHaveBeenCalledTimes(1);
+
+      // キャッシュをクリア
+      tagController.clearCache(dirPath);
+
+      // 再度読み込み
+      await tagController.loadTagsInDir(dirPath);
+
+      // Assert - APIが再度呼ばれる
+      expect(tagsApi.loadTagsInDir).toHaveBeenCalledTimes(2);
+    });
+
+    it('should work with Windows paths', async () => {
+      // Arrange
+      const dirPath = 'C:\\Users\\test\\images\\';
+      const mockTagsMap = { 'photo.jpg': ['vacation'] };
+
+      vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(mockTagsMap);
+
+      // Act
+      const result = await tagController.loadTagsInDir(dirPath);
+
+      // Assert
+      expect(result).toEqual(mockTagsMap);
+      expect(tagsApi.loadTagsInDir).toHaveBeenCalledWith(dirPath);
+    });
+
+    it('should maintain consistency with getImageTags cache', async () => {
+      // Arrange
+      const imagePath = '/test/directory/image1.jpg';
+      const dirPath = '/test/directory/';
+      const mockTagsMap = {
+        'image1.jpg': ['nature', 'landscape'],
+        'image2.jpg': ['portrait'],
+      };
+
+      vi.mocked(tagsApi.loadTagsInDir).mockResolvedValue(mockTagsMap);
+
+      // Act - loadTagsInDirで先にキャッシュ
+      await tagController.loadTagsInDir(dirPath);
+
+      // getImageTagsを呼び出し（同じキャッシュを使用するはず）
+      const imageTags = await tagController.getImageTags(imagePath);
+
+      // Assert
+      expect(imageTags).toEqual(['nature', 'landscape']);
+      expect(tagsApi.loadTagsInDir).toHaveBeenCalledTimes(1); // キャッシュが共有されている
+    });
+  });
 });

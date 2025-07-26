@@ -34,6 +34,27 @@ export class TagController {
   }
 
   /**
+   * 指定したディレクトリのタグマップを取得します
+   * @param dirPath ディレクトリパス
+   * @returns ファイル名をキーとしたタグマップ
+   */
+  public async loadTagsInDir(dirPath: string): Promise<Record<string, string[]>> {
+    try {
+      // キャッシュがあればそれを使用、なければAPIから取得
+      if (!this.tagsCache.has(dirPath)) {
+        const tagsMap = await loadTagsInDir(dirPath);
+        this.tagsCache.set(dirPath, tagsMap);
+      }
+
+      return this.tagsCache.get(dirPath)!;
+    } catch (error) {
+      console.error('Failed to load tags in directory:', error);
+      this.toastController.showToast('ディレクトリのタグ読み込みに失敗しました');
+      return {};
+    }
+  }
+
+  /**
    * 指定した画像ファイルのタグを保存します
    * @param imagePath 画像ファイルのフルパス
    * @param tags 保存するタグの配列

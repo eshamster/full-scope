@@ -3,6 +3,7 @@ import { Controler } from '../controller';
 import { ImageInfoManager } from '../image-info-manager.svelte';
 import { DialogController } from '../dialog-controller.svelte';
 import { GotoDialogController } from '../goto-dialog-controller.svelte';
+import { FilterDialogController } from '../filter-dialog-controller.svelte';
 import { FileController } from '../file-controller';
 import { ToastController } from '../toast-controller.svelte';
 import { ViewerController } from '../viewer-controller.svelte';
@@ -12,6 +13,7 @@ describe('Controller - Image Info Display', () => {
   let imageInfoManager: ImageInfoManager;
   let dialogController: DialogController;
   let gotoDialogController: GotoDialogController;
+  let filterDialogController: FilterDialogController;
   let fileController: FileController;
   let toastController: ToastController;
   let viewerController: ViewerController;
@@ -20,6 +22,7 @@ describe('Controller - Image Info Display', () => {
     imageInfoManager = new ImageInfoManager();
     dialogController = new DialogController();
     gotoDialogController = new GotoDialogController();
+    filterDialogController = new FilterDialogController(imageInfoManager);
     fileController = new FileController();
     toastController = new ToastController();
     viewerController = new ViewerController();
@@ -30,7 +33,8 @@ describe('Controller - Image Info Display', () => {
       fileController,
       toastController,
       viewerController,
-      gotoDialogController
+      gotoDialogController,
+      filterDialogController
     );
 
     // ImageInfoManagerのメソッドをモック
