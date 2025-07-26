@@ -168,12 +168,12 @@
   const { show, imagePath, initialTags, imageInfoManager, onSave, onCancel }: Props = $props();
 
   let tagsText = $state('');
-  let textAreaElement = $state<HTMLTextAreaElement>();
-  let ignoreNextInput = $state(false);
+  let textAreaElement: HTMLTextAreaElement | undefined;
+  let ignoreNextInput = false;
   let validationError = $state<string | null>(null);
   let isEasyInputMode = $state(true); // 簡易入力モード（true）か自由入力モード（false）か
   let availableTags = $state<string[]>([]); // 利用可能なタグ一覧
-  let isLoadingTags = false; // タグ読み込み中フラグ（非リアクティブ）
+  let isLoadingTags = false; // タグ読み込み中フラグ
 
   // タグ配列をカンマ区切り文字列に変換
   $effect(() => {
