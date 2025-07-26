@@ -207,7 +207,8 @@
     }
 
     isLoadingTags = true;
-    imageInfoManager.getAvailableTags()
+    imageInfoManager
+      .getAvailableTags()
       .then(tags => {
         // showがまだtrueの場合のみ更新
         if (show) {
@@ -256,15 +257,15 @@
   // 頭文字タイプによるタグ追加
   function handleHeadCharType(char: string): void {
     const lowerChar = char.toLowerCase();
-    
+
     // 指定された頭文字で始まるタグをソート順で取得
     const matchingTags = availableTags
       .filter(tag => tag.toLowerCase().startsWith(lowerChar))
       .sort();
-    
+
     // 未入力のタグから最初のものを選択
     const tagToAdd = matchingTags.find(tag => !currentTagsSet.has(tag));
-    
+
     if (tagToAdd) {
       const newTags = [...currentTags, tagToAdd];
       tagsText = newTags.join(', ');
@@ -294,7 +295,7 @@
       // 簡易入力モードでの頭文字タイプ
       event.preventDefault();
       event.stopPropagation();
-      
+
       // 開始直後の文字入力を無視（Tキーの重複入力防止）
       if (!ignoreNextInput) {
         handleHeadCharType(event.key);
@@ -442,7 +443,7 @@
           <div class="no-available-tags">利用可能なタグがありません</div>
         </div>
       {/if}
-      
+
       <div class="focus-hint">
         {#if isEasyInputMode}
           頭文字をタイプしてタグを追加、Tabで自由入力欄へ移動
@@ -450,7 +451,7 @@
           自由入力モード - 直接編集できます
         {/if}
       </div>
-      
+
       <textarea
         bind:this={textAreaElement}
         bind:value={tagsText}
