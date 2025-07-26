@@ -177,9 +177,7 @@
 
   // タグ配列をカンマ区切り文字列に変換
   $effect(() => {
-    console.log('[TagEditor] Effect 1 - show changed:', show);
     if (show) {
-      console.log('[TagEditor] Setting up dialog, initialTags:', initialTags);
       tagsText = initialTags.join(', ');
       isEasyInputMode = true; // ダイアログを開いた時は簡易入力モード
       // エディタを開いた直後の入力を一時的に無視
@@ -192,14 +190,11 @@
 
   // ダイアログ表示時に利用可能タグを取得
   $effect(() => {
-    console.log('[TagEditor] Effect 2 - show/manager changed:', { show, hasManager: !!imageInfoManager });
     if (show && imageInfoManager && !isLoadingTags) {
       // 非同期処理を分離して実行
-      console.log('[TagEditor] CALLING loadAvailableTags');
       loadAvailableTags();
     } else if (!show) {
       // ダイアログが非表示になったらクリア
-      console.log('[TagEditor] Clearing availableTags');
       availableTags = [];
       isLoadingTags = false;
     }
@@ -207,17 +202,13 @@
 
   // 利用可能なタグを取得する関数
   function loadAvailableTags(): void {
-    console.log('[TagEditor] loadAvailableTags called');
     if (!imageInfoManager || isLoadingTags) {
-      console.log('[TagEditor] No imageInfoManager or already loading');
       return;
     }
 
     isLoadingTags = true;
-    console.log('[TagEditor] Calling imageInfoManager.getAvailableTags()');
     imageInfoManager.getAvailableTags()
       .then(tags => {
-        console.log('[TagEditor] Got available tags:', tags.length, 'show:', show);
         // showがまだtrueの場合のみ更新
         if (show) {
           availableTags = tags;
@@ -225,7 +216,7 @@
         isLoadingTags = false;
       })
       .catch(error => {
-        console.error('[TagEditor] Failed to load available tags:', error);
+        console.error('Failed to load available tags:', error);
         if (show) {
           availableTags = [];
         }
@@ -234,21 +225,15 @@
   }
 
   // 現在の入力からタグ配列を取得（キャッシュされた結果）
-  const currentTags = $derived((() => {
-    const result = tagsText
+  const currentTags = $derived(
+    tagsText
       .split(',')
       .map(tag => tag.trim())
-      .filter(tag => tag.length > 0);
-    console.log('[TagEditor] currentTags derived:', result);
-    return result;
-  })());
+      .filter(tag => tag.length > 0)
+  );
 
   // 現在のタグセット（高速検索用）
-  const currentTagsSet = $derived((() => {
-    const result = new Set(currentTags);
-    console.log('[TagEditor] currentTagsSet derived:', result.size, 'items');
-    return result;
-  })());
+  const currentTagsSet = $derived(new Set(currentTags));
 
   // タグがすでに入力済みかチェック
   function isTagAlreadyAdded(tag: string): boolean {
@@ -359,7 +344,6 @@
 
   // リアルタイムバリデーション（$derivedで最適化）
   $effect(() => {
-    console.log('[TagEditor] Effect 3 - validation:', { show, tagsTextLength: tagsText.length, currentTagsLength: currentTags.length });
     if (!show || tagsText.length === 0) {
       validationError = null;
     } else {
