@@ -168,7 +168,7 @@
   const { show, imagePath, initialTags, imageInfoManager, onSave, onCancel }: Props = $props();
 
   let tagsText = $state('');
-  let textAreaElement: HTMLTextAreaElement | undefined;
+  let textAreaElement = $state<HTMLTextAreaElement | undefined>(undefined);
   let ignoreNextInput = false;
   let validationError = $state<string | null>(null);
   let isEasyInputMode = $state(true); // 簡易入力モード（true）か自由入力モード（false）か
