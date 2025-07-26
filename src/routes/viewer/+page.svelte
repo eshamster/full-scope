@@ -334,6 +334,7 @@
     show={showTagEditor}
     imagePath={manager.getListLength() > 0 ? manager.getCurrent().path : ''}
     initialTags={currentImageTags}
+    imageInfoManager={manager}
     onSave={handleTagSave}
     onCancel={handleTagCancel}
   ></TagEditor>
