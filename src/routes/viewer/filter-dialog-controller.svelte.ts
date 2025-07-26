@@ -12,9 +12,9 @@ export class FilterDialogController {
   }
 
   public async showDialog(): Promise<void> {
-    this.availableTags = await this.imageInfoManager.getAvailableTags();
     this.selectedTags.clear();
     this.show = true;
+    this.availableTags = await this.imageInfoManager.getAvailableTags();
   }
 
   public hideDialog(): void {
@@ -32,8 +32,8 @@ export class FilterDialogController {
 
   public async executeFilter(): Promise<void> {
     const selectedTagsArray = Array.from(this.selectedTags);
-    await this.imageInfoManager.applyTagFilter(selectedTagsArray);
     this.hideDialog();
+    await this.imageInfoManager.applyTagFilter(selectedTagsArray);
   }
 
   public isShow(): boolean {
