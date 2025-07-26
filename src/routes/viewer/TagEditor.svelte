@@ -462,6 +462,7 @@
           }
         }}
         onfocus={handleTextAreaFocus}
+        onclick={handleTextAreaFocus}
         onblur={handleTextAreaBlur}
         placeholder="タグをカンマ区切りで入力してください"
         rows="4"
