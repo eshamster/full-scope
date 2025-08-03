@@ -108,12 +108,23 @@ fn get_prev_image_paths() -> ImagePaths {
 }
 
 // 渡されたパスのファイルをゴミ箱に移動するTauriコマンド
-// TODO: クライアントに返したパスを記録してそれ以外のファイルは削除しないようにする
+// セキュリティ: アプリが管理している画像パスのみ削除を許可
 #[tauri::command]
 fn delete_file(path: String) -> Result<(), String> {
-    let path = std::path::Path::new(&path);
-    if path.is_file() {
-        let trash = trash::delete(path);
+    // まず、渡されたパスがアプリが管理している画像パスに含まれているかチェック
+    let image_paths = IMAGE_PATHS
+        .get()
+        .expect("failed to get IMAGE_PATHS_MUTEX")
+        .lock()
+        .expect("failed to lock IMAGE_PATHS_MUTEX");
+
+    if !image_paths.paths.contains(&path) {
+        return Err("unauthorized file deletion: path not in managed image list".to_string());
+    }
+
+    let path_obj = std::path::Path::new(&path);
+    if path_obj.is_file() {
+        let trash = trash::delete(path_obj);
         if trash.is_ok() {
             Ok(())
         } else {
@@ -1000,5 +1011,59 @@ mod tests {
             assert!(json_str.contains(&format!("\"width\":{}", TEST_IMAGE_WIDTH)));
             assert!(json_str.contains(&format!("\"height\":{}", TEST_IMAGE_HEIGHT)));
         }
+    }
+
+    #[test]
+    fn test_delete_file_security_unauthorized_path() {
+        // IMAGE_PATHS静的変数を初期化
+        IMAGE_PATHS.get_or_init(|| {
+            Mutex::new(ImagePaths {
+                id: 0,
+                paths: vec!["managed_file.jpg".to_string()],
+            })
+        });
+
+        // 管理されていないパスの削除を試行した場合、エラーが返されることを確認
+        let result = delete_file("unauthorized_path.jpg".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("unauthorized file deletion"));
+    }
+
+    #[test]
+    fn test_delete_file_security_authorized_path() {
+        // テスト用の一時ファイルを作成（中身は何でも良い）
+        let temp_dir = tempfile::tempdir().unwrap();
+        let test_file = temp_dir.path().join("test.png");
+        std::fs::write(&test_file, b"dummy content").unwrap();
+
+        let test_path = test_file.to_str().unwrap().to_string();
+
+        // IMAGE_PATHS静的変数を初期化してテストパスを追加
+        IMAGE_PATHS.get_or_init(|| {
+            Mutex::new(ImagePaths {
+                id: 0,
+                paths: vec![],
+            })
+        });
+
+        // 既存のイメージパスリストにテストパスを追加
+        {
+            let mut image_paths = IMAGE_PATHS
+                .get()
+                .expect("failed to get IMAGE_PATHS_MUTEX")
+                .lock()
+                .expect("failed to lock IMAGE_PATHS_MUTEX");
+            image_paths.paths.push(test_path.clone());
+        }
+
+        // 管理されているパスの削除は成功すべき
+        let result = delete_file(test_path);
+        if result.is_err() {
+            eprintln!("Delete failed with error: {}", result.as_ref().unwrap_err());
+        }
+        assert!(result.is_ok());
+
+        // ファイルがゴミ箱に移動されたことを確認（存在しないことで確認）
+        assert!(!test_file.exists());
     }
 }
