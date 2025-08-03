@@ -68,7 +68,10 @@ fn extract_image_files(paths: Vec<String>) -> Vec<String> {
     let mut image_files = Vec::new();
     let image_exts = ["png", "jpeg", "jpg", "gif", "webp"];
 
-    let is_image = |path: &str| -> bool { image_exts.iter().any(|ext| path.ends_with(ext)) };
+    let is_image = |path: &str| -> bool {
+        let path_lower = path.to_lowercase();
+        image_exts.iter().any(|ext| path_lower.ends_with(ext))
+    };
 
     for path in paths {
         if is_image(&path) {
@@ -494,7 +497,7 @@ mod tests {
     #[test]
     fn test_extract_image_files_case_sensitivity() {
         // TODO: 大文字拡張子のサポートを実装後、このテストを更新
-        // 現在は大文字拡張子をサポートしていないため、期待値は0
+        // 大文字拡張子をサポートしているため、期待値は3
         let paths = vec![
             "test.JPG".to_string(),
             "test.PNG".to_string(),
@@ -503,8 +506,8 @@ mod tests {
 
         let result = extract_image_files(paths);
 
-        // 現在は大文字拡張子未サポート（TODO: dev_doc/TODO.md 参照）
-        assert_eq!(result.len(), 0);
+        // 大文字拡張子もサポート
+        assert_eq!(result.len(), 3);
     }
 
     #[test]
