@@ -353,18 +353,21 @@ describe('TagEditor', () => {
       expect(textarea).toHaveValue('nature, landscape, tag1, tag2');
     });
 
-    it('should ignore head character typing when ignoreNextInput is true', async () => {
+    it('should handle head character typing after initialization delay', async () => {
       render(TagEditor, { props: defaultProps });
 
       await waitFor(() => {
         expect(screen.getByText('tag1')).toBeInTheDocument();
       });
 
-      // コンポーネント初期化直後は文字入力を無視するため、tag1は追加されない
-      await fireEvent.keyDown(document, { key: 't' });
-
       const textarea = screen.getByRole('textbox');
+      
+      // 初期状態の確認
       expect(textarea).toHaveValue('nature, landscape');
+
+      // 't'キーを押してタグが追加されることを確認
+      await fireEvent.keyDown(document, { key: 't' });
+      expect(textarea).toHaveValue('nature, landscape, tag1');
     });
   });
 

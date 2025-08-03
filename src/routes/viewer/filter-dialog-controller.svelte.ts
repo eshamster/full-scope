@@ -47,4 +47,8 @@ export class FilterDialogController {
   public isTagSelected(tag: string): boolean {
     return this.selectedTags.has(tag);
   }
+
+  public getSelectedTags(): string[] {
+    return Array.from(this.selectedTags);
+  }
 }

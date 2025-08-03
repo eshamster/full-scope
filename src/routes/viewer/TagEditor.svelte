@@ -100,12 +100,6 @@
 
   .easy-input-container {
     margin-bottom: 1.5em;
-    padding: 1em;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #fafafa;
-    max-height: 200px;
-    overflow-y: auto;
   }
 
   .easy-input-title {
@@ -113,37 +107,6 @@
     margin-bottom: 0.5em;
     color: #333;
     font-size: 0.9em;
-  }
-
-  .tag-button {
-    padding: 6px 12px;
-    margin: 3px;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 13px;
-    transition: all 0.2s ease;
-    display: inline-block;
-    user-select: none;
-  }
-
-  .tag-button.unselected {
-    border: 1px solid black;
-    background: white;
-    color: black;
-  }
-
-  .tag-button.selected {
-    border: none;
-    background: black;
-    color: white;
-  }
-
-  .no-available-tags {
-    text-align: center;
-    color: #666;
-    font-style: italic;
-    padding: 10px;
-    font-size: 0.85em;
   }
 
   .focus-hint {
@@ -155,6 +118,7 @@
 
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import TagSelector from './TagSelector.svelte';
 
   type Props = {
     show: boolean;
@@ -169,7 +133,8 @@
 
   let tagsText = $state('');
   let textAreaElement = $state<HTMLTextAreaElement | undefined>(undefined);
-  let ignoreNextInput = false;
+  // svelte-ignore non_reactive_update
+  let ignoreNextInput = false; // 一時的なフラグ、$state不要（再描画トリガー防止）
   let validationError = $state<string | null>(null);
   let isEasyInputMode = $state(true); // 簡易入力モード（true）か自由入力モード（false）か
   let availableTags = $state<string[]>([]); // 利用可能なタグ一覧
@@ -255,22 +220,16 @@
   }
 
   // 頭文字タイプによるタグ追加
-  function handleHeadCharType(char: string): void {
-    const lowerChar = char.toLowerCase();
-
-    // 指定された頭文字で始まるタグをソート順で取得
-    const matchingTags = availableTags
-      .filter(tag => tag.toLowerCase().startsWith(lowerChar))
-      .sort();
-
-    // 未入力のタグから最初のものを選択
-    const tagToAdd = matchingTags.find(tag => !currentTagsSet.has(tag));
+  const handleHeadCharMatch = (matchingTags: string[], _char: string): void => {
+    // 指定された頭文字で始まるタグをソート順で取得し、未入力のタグから最初のものを選択
+    const sortedTags = matchingTags.sort();
+    const tagToAdd = sortedTags.find(tag => !currentTagsSet.has(tag));
 
     if (tagToAdd) {
       const newTags = [...currentTags, tagToAdd];
       tagsText = newTags.join(', ');
     }
-  }
+  };
 
   function handleKeydown(event: KeyboardEvent) {
     if (!show) return;
@@ -290,15 +249,6 @@
       isEasyInputMode = false;
       if (textAreaElement) {
         textAreaElement.focus();
-      }
-    } else if (isEasyInputMode && /^[a-zA-Z0-9]$/.test(event.key)) {
-      // 簡易入力モードでの頭文字タイプ
-      event.preventDefault();
-      event.stopPropagation();
-
-      // 開始直後の文字入力を無視（Tキーの重複入力防止）
-      if (!ignoreNextInput) {
-        handleHeadCharType(event.key);
       }
     } else {
       // タグエディタ表示中は他のキー操作も阻止
@@ -425,24 +375,18 @@
         {imagePath}
       </div>
       <!-- 簡易入力補助パート -->
-      {#if availableTags.length > 0}
-        <div class="easy-input-container">
-          <div class="easy-input-title">既存タグから選択:</div>
-          {#each availableTags as tag (tag)}
-            <button
-              class="tag-button {isTagAlreadyAdded(tag) ? 'selected' : 'unselected'}"
-              onclick={() => handleTagButtonClick(tag)}
-              type="button"
-            >
-              {tag}
-            </button>
-          {/each}
-        </div>
-      {:else}
-        <div class="easy-input-container">
-          <div class="no-available-tags">利用可能なタグがありません</div>
-        </div>
-      {/if}
+      <div class="easy-input-container">
+        <div class="easy-input-title">既存タグから選択:</div>
+        <TagSelector
+          {availableTags}
+          selectedTags={currentTags}
+          onTagToggle={handleTagButtonClick}
+          onHeadCharMatch={handleHeadCharMatch}
+          enableKeyboardInput={isEasyInputMode && !ignoreNextInput}
+          containerClass=""
+          noTagsMessage="利用可能なタグがありません"
+        />
+      </div>
 
       <div class="focus-hint">
         {#if isEasyInputMode}
