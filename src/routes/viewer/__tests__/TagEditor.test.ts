@@ -361,7 +361,7 @@ describe('TagEditor', () => {
       });
 
       const textarea = screen.getByRole('textbox');
-      
+
       // 初期状態の確認
       expect(textarea).toHaveValue('nature, landscape');
 

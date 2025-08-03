@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import TagSelector from '../TagSelector.svelte';
 
 describe('TagSelector', () => {
@@ -245,9 +245,7 @@ describe('TagSelector', () => {
       });
 
       // キーダウンイベントが正常に処理されることを確認（エラーが発生しない）
-      await expect(
-        fireEvent.keyDown(document, { key: 'n' })
-      ).resolves.not.toThrow();
+      await expect(fireEvent.keyDown(document, { key: 'n' })).resolves.not.toThrow();
     });
   });
 
@@ -309,19 +307,11 @@ describe('TagSelector', () => {
         },
       });
 
-      expect(addEventListenerSpy).toHaveBeenCalledWith(
-        'keydown',
-        expect.any(Function),
-        true
-      );
+      expect(addEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
 
       unmount();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith(
-        'keydown',
-        expect.any(Function),
-        true
-      );
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
 
       addEventListenerSpy.mockRestore();
       removeEventListenerSpy.mockRestore();
@@ -338,9 +328,7 @@ describe('TagSelector', () => {
       });
 
       // keydownイベントリスナーが追加されていないことを確認
-      const keydownCalls = addEventListenerSpy.mock.calls.filter(
-        call => call[0] === 'keydown'
-      );
+      const keydownCalls = addEventListenerSpy.mock.calls.filter(call => call[0] === 'keydown');
       expect(keydownCalls).toHaveLength(0);
 
       addEventListenerSpy.mockRestore();
