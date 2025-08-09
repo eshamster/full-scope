@@ -305,7 +305,7 @@
     <div
       class="grid"
       style="
-             gride-template-rows: repeat({viewerController.getRows()}, 1fr);
+             grid-template-rows: repeat({viewerController.getRows()}, 1fr);
              grid-template-columns: repeat({viewerController.getCols()}, 1fr);
              "
     >
