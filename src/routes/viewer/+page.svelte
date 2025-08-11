@@ -479,6 +479,6 @@
   <ImageInfoDisplay
     show={manager.isImageInfoDisplayed()}
     imageInfo={manager.getListLength() > 0 ? manager.getCurrent() : null}
-    globalRotation={globalRotation}
+    {globalRotation}
   ></ImageInfoDisplay>
 </main>
