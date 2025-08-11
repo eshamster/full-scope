@@ -172,7 +172,7 @@
       } else {
         return [];
       }
-    } catch (error) {
+    } catch {
       return [];
     }
   });
