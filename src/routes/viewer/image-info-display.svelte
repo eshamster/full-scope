@@ -41,6 +41,7 @@
   interface Props {
     imageInfo: ImageInfo | null;
     show: boolean;
+    globalRotation?: number;
   }
 
   interface FileInfo {
@@ -51,7 +52,7 @@
     tags: string[];
   }
 
-  let { imageInfo, show }: Props = $props();
+  let { imageInfo, show, globalRotation = 0 }: Props = $props();
 
   let fileInfo: FileInfo | null = $state(null);
 
@@ -109,15 +110,40 @@
     return tags.length > 0 ? tags.join(', ') : 'なし';
   }
 
-  const infoItems = $derived.by(() => {
-    if (!fileInfo) return [];
+  function normalizeAngle(angle: number): number {
+    return ((angle % 360) + 360) % 360;
+  }
 
-    return [
+  function formatRotationInfo(localRotation: number, globalRotation: number): string | null {
+    const normalizedLocal = normalizeAngle(localRotation);
+    const normalizedGlobal = normalizeAngle(globalRotation);
+    const totalRotation = normalizeAngle(localRotation + globalRotation);
+
+    // local, globalどちらも0度の場合は表示しない
+    if (normalizedLocal === 0 && normalizedGlobal === 0) {
+      return null;
+    }
+
+    return `回転角: ${totalRotation}度（この画像: ${normalizedLocal}度, 全画像: ${normalizedGlobal}度）`;
+  }
+
+  const infoItems = $derived.by(() => {
+    if (!fileInfo || !imageInfo) return [];
+
+    const items = [
       { label: 'ファイル名:', value: fileInfo.filename },
       { label: 'ファイルサイズ:', value: formatFileSize(fileInfo.fileSize) },
       { label: '画像サイズ:', value: `${fileInfo.width} × ${fileInfo.height}` },
       { label: 'タグ:', value: formatTags(fileInfo.tags) },
     ];
+
+    // 回転情報を追加（0度でない場合のみ）
+    const rotationInfo = formatRotationInfo(imageInfo.getLocalRotation(), globalRotation);
+    if (rotationInfo) {
+      items.push({ label: '', value: rotationInfo });
+    }
+
+    return items;
   });
 </script>
 
