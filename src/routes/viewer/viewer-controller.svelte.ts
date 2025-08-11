@@ -33,4 +33,8 @@ export class ViewerController {
   public getCols(): number {
     return this.cols;
   }
+
+  public getCells(): number {
+    return this.rows * this.cols;
+  }
 }

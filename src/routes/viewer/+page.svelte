@@ -311,7 +311,12 @@
     >
       {#each currentImages as img, i (i)}
         <div class="cell">
-          <img id="image" src={convertFileSrc(img.path)} alt={img.path} />
+          <img
+            id="image"
+            src={convertFileSrc(img.path)}
+            alt={img.path}
+            style="transform: rotate({manager.getTotalRotation(img)}deg);"
+          />
         </div>
       {/each}
     </div>
