@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ImageInfo } from '../image-info';
+import { ImageInfo } from '../image-info.svelte';
 
 describe('ImageInfo', () => {
   describe('constructor', () => {

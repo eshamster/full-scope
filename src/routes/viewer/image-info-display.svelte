@@ -33,7 +33,7 @@
 </style>
 
 <script lang="ts">
-  import type { ImageInfo } from './image-info';
+  import type { ImageInfo } from './image-info.svelte';
   import { loadTagsInDir } from '$lib/api/tags';
   import { invoke } from '@tauri-apps/api/core';
   import { getDirPath, getFileName } from './path-utils';

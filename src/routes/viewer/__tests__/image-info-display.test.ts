@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, test, expect, vi } from 'vitest';
 import ImageInfoDisplay from '../image-info-display.svelte';
-import { ImageInfo } from '../image-info';
+import { ImageInfo } from '../image-info.svelte';
 
 // APIモック
 vi.mock('$lib/api/tags', () => ({

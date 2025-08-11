@@ -74,7 +74,7 @@
   import { listen } from '@tauri-apps/api/event';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { onMount, onDestroy } from 'svelte';
-  import { ImageInfo } from '@/routes/viewer/image-info';
+  import { ImageInfo } from '@/routes/viewer/image-info.svelte';
   import { ImageInfoManager } from '@/routes/viewer/image-info-manager.svelte';
   import { DialogController } from '@/routes/viewer/dialog-controller.svelte';
   import { FileController } from '@/routes/viewer/file-controller';

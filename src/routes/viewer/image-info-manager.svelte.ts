@@ -1,4 +1,4 @@
-import { ImageInfo } from './image-info';
+import { ImageInfo } from './image-info.svelte';
 import { Semaphore } from 'await-semaphore';
 import { ImageShowHistory } from './image-show-history';
 import { SvelteSet, SvelteMap } from 'svelte/reactivity';

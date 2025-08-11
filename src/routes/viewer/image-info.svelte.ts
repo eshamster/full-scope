@@ -1,6 +1,6 @@
 export class ImageInfo {
   private tempBookmark: boolean = false;
-  private localRotation: number = 0; // ローカル回転角度（0, 90, 180, 270度）
+  private localRotation: number = $state(0); // ローカル回転角度（0, 90, 180, 270度）
 
   constructor(public path: string) {}
 

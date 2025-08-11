@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ImageInfoManager } from '../image-info-manager.svelte';
-import { ImageInfo } from '../image-info';
+import { ImageInfo } from '../image-info.svelte';
 import type { TagController } from '../tag-controller.svelte';
 
 describe('ImageInfoManager', () => {
