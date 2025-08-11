@@ -212,38 +212,20 @@
     naturalWidth: number,
     naturalHeight: number,
     rotation: number
-  ): { width: number; height: number; actualImageWidth?: number; actualImageHeight?: number } {
+  ): { actualImageWidth: number; actualImageHeight: number } {
     const cell = getCellDimensions();
 
     // 回転を考慮した有効画像サイズ
     const effectiveWidth = rotation % 180 === 0 ? naturalWidth : naturalHeight;
     const effectiveHeight = rotation % 180 === 0 ? naturalHeight : naturalWidth;
 
-    // 表示枠サイズとobject-fitの切り替え
-    let containerWidth, containerHeight, actualImageWidth, actualImageHeight;
+    const scale = Math.min(cell.width / effectiveWidth, cell.height / effectiveHeight);
 
-    if (rotation % 180 !== 0) {
-      // 90度・270度回転時：object-fit: noneで手動サイズ計算
-      const scale = Math.min(cell.width / effectiveWidth, cell.height / effectiveHeight);
-
-      // コンテナは最大限大きく
-      containerWidth = cell.width;
-      containerHeight = cell.height;
-
-      // 実際の画像表示サイズ（object-fit: noneで使用）
-      actualImageWidth = naturalWidth * scale;
-      actualImageHeight = naturalHeight * scale;
-    } else {
-      // 0度・180度回転時：object-fit: containで通常処理
-      containerWidth = cell.width;
-      containerHeight = cell.height;
-      actualImageWidth = undefined;
-      actualImageHeight = undefined;
-    }
+    // 実際の画像表示サイズを計算
+    const actualImageWidth = naturalWidth * scale;
+    const actualImageHeight = naturalHeight * scale;
 
     return {
-      width: containerWidth,
-      height: containerHeight,
       actualImageWidth,
       actualImageHeight,
     };
@@ -271,30 +253,13 @@
       rotation
     );
 
-    // スタイル生成：90度・270度回転時は実際の計算サイズを使用
-    let style;
-    const useActualSize =
-      rotation % 180 !== 0 && optimal.actualImageWidth && optimal.actualImageHeight;
-
-    if (useActualSize) {
-      // 90度・270度回転時：計算された実際サイズを直接指定
-      style = `
-        width: ${optimal.actualImageWidth}px;
-        height: ${optimal.actualImageHeight}px;
-        object-fit: fill;
-        transform: translate(-50%, -50%) rotate(${rotation}deg);
-      `;
-    } else {
-      // 0度・180度回転時：コンテナサイズ + object-fit: contain
-      style = `
-        width: ${optimal.width}px;
-        height: ${optimal.height}px;
-        object-fit: contain;
-        transform: translate(-50%, -50%) rotate(${rotation}deg);
-      `;
-    }
-
-    style = style.trim();
+    // 計算された実際のサイズを使用
+    const style = `
+      width: ${optimal.actualImageWidth}px;
+      height: ${optimal.actualImageHeight}px;
+      object-fit: fill;
+      transform: translate(-50%, -50%) rotate(${rotation}deg);
+    `.trim();
     return style;
   }
 
