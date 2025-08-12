@@ -24,7 +24,11 @@ export type Operation =
   | 'editTags'
   | 'toggleImageInfo'
   | 'goto'
-  | 'filterByTag';
+  | 'filterByTag'
+  | 'rotateGlobalRight'
+  | 'rotateGlobalLeft'
+  | 'rotateLocalRight'
+  | 'rotateLocalLeft';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -63,6 +67,12 @@ const keyConfigs: keyConfig[] = [
   { key: 'i', operation: 'toggleImageInfo', modifierKeys: [] },
   { key: 'g', operation: 'goto', modifierKeys: ['ctrl', 'shift'] },
   { key: 't', operation: 'filterByTag', modifierKeys: ['ctrl', 'shift'] },
+  { key: 'ArrowRight', operation: 'rotateGlobalRight', modifierKeys: ['ctrl', 'shift'] },
+  { key: 'ArrowLeft', operation: 'rotateGlobalLeft', modifierKeys: ['ctrl', 'shift'] },
+  { key: 'ArrowRight', operation: 'rotateLocalRight', modifierKeys: ['ctrl'] },
+  { key: 'f', operation: 'rotateLocalRight', modifierKeys: ['ctrl', 'shift'] },
+  { key: 'ArrowLeft', operation: 'rotateLocalLeft', modifierKeys: ['ctrl'] },
+  { key: 'b', operation: 'rotateLocalLeft', modifierKeys: ['ctrl', 'shift'] },
 ];
 
 export class Controler {
@@ -212,6 +222,22 @@ export class Controler {
       case 'filterByTag':
         this.filterDialogController.showDialog();
         break;
+      case 'rotateGlobalRight':
+        this.imageInfoManager.rotateGlobalRight();
+        break;
+      case 'rotateGlobalLeft':
+        this.imageInfoManager.rotateGlobalLeft();
+        break;
+      case 'rotateLocalRight': {
+        const cellCount = this.viewerController.getCells();
+        this.imageInfoManager.rotateVisibleLocalRight(cellCount);
+        break;
+      }
+      case 'rotateLocalLeft': {
+        const cellCount = this.viewerController.getCells();
+        this.imageInfoManager.rotateVisibleLocalLeft(cellCount);
+        break;
+      }
     }
   }
 

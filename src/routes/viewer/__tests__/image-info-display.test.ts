@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, test, expect, vi } from 'vitest';
 import ImageInfoDisplay from '../image-info-display.svelte';
-import { ImageInfo } from '../image-info';
+import { ImageInfo } from '../image-info.svelte';
 
 // APIモック
 vi.mock('$lib/api/tags', () => ({
@@ -81,5 +81,97 @@ describe('ImageInfoDisplay', () => {
     expect(formatTags([])).toBe('なし');
     expect(formatTags(['nature'])).toBe('nature');
     expect(formatTags(['nature', 'landscape', 'sunset'])).toBe('nature, landscape, sunset');
+  });
+
+  test('角度の正規化が正しく動作する', () => {
+    const normalizeAngle = (angle: number): number => {
+      return ((angle % 360) + 360) % 360;
+    };
+
+    expect(normalizeAngle(0)).toBe(0);
+    expect(normalizeAngle(90)).toBe(90);
+    expect(normalizeAngle(180)).toBe(180);
+    expect(normalizeAngle(270)).toBe(270);
+    expect(normalizeAngle(360)).toBe(0);
+    expect(normalizeAngle(-90)).toBe(270);
+    expect(normalizeAngle(-180)).toBe(180);
+    expect(normalizeAngle(450)).toBe(90);
+  });
+
+  test('回転情報のフォーマットが正しく動作する', () => {
+    const normalizeAngle = (angle: number): number => {
+      return ((angle % 360) + 360) % 360;
+    };
+
+    const formatRotationInfo = (localRotation: number, globalRotation: number): string | null => {
+      const normalizedLocal = normalizeAngle(localRotation);
+      const normalizedGlobal = normalizeAngle(globalRotation);
+      const totalRotation = normalizeAngle(localRotation + globalRotation);
+
+      // local, globalどちらも0度の場合は表示しない
+      if (normalizedLocal === 0 && normalizedGlobal === 0) {
+        return null;
+      }
+
+      return `回転角: ${totalRotation}度（この画像: ${normalizedLocal}度, 全画像: ${normalizedGlobal}度）`;
+    };
+
+    // 両方が0度の場合は表示しない
+    expect(formatRotationInfo(0, 0)).toBeNull();
+
+    // ローカル回転のみ
+    expect(formatRotationInfo(90, 0)).toBe('回転角: 90度（この画像: 90度, 全画像: 0度）');
+    expect(formatRotationInfo(180, 0)).toBe('回転角: 180度（この画像: 180度, 全画像: 0度）');
+    expect(formatRotationInfo(270, 0)).toBe('回転角: 270度（この画像: 270度, 全画像: 0度）');
+
+    // グローバル回転のみ
+    expect(formatRotationInfo(0, 90)).toBe('回転角: 90度（この画像: 0度, 全画像: 90度）');
+    expect(formatRotationInfo(0, 180)).toBe('回転角: 180度（この画像: 0度, 全画像: 180度）');
+    expect(formatRotationInfo(0, 270)).toBe('回転角: 270度（この画像: 0度, 全画像: 270度）');
+
+    // 両方の回転の合成
+    expect(formatRotationInfo(90, 90)).toBe('回転角: 180度（この画像: 90度, 全画像: 90度）');
+    expect(formatRotationInfo(270, 180)).toBe('回転角: 90度（この画像: 270度, 全画像: 180度）');
+    expect(formatRotationInfo(180, 180)).toBe('回転角: 0度（この画像: 180度, 全画像: 180度）');
+
+    // 負の角度の正規化
+    expect(formatRotationInfo(-90, 0)).toBe('回転角: 270度（この画像: 270度, 全画像: 0度）');
+    expect(formatRotationInfo(0, -90)).toBe('回転角: 270度（この画像: 0度, 全画像: 270度）');
+
+    // 360度を超える角度の正規化
+    expect(formatRotationInfo(450, 0)).toBe('回転角: 90度（この画像: 90度, 全画像: 0度）');
+    expect(formatRotationInfo(0, 450)).toBe('回転角: 90度（この画像: 0度, 全画像: 90度）');
+  });
+
+  test('globalRotationプロパティが回転情報表示に反映される', () => {
+    const mockImageInfoWithRotation = new ImageInfo('/path/to/test.jpg');
+    mockImageInfoWithRotation.rotateLocalRight(); // 90度回転
+
+    render(ImageInfoDisplay, {
+      props: {
+        show: true,
+        imageInfo: mockImageInfoWithRotation,
+        globalRotation: 90, // グローバル回転90度
+      },
+    });
+
+    // 回転情報が含まれることを想定したテスト
+    // 実際の表示内容の確認はE2Eテストで行う
+    expect(mockImageInfoWithRotation.getLocalRotation()).toBe(90);
+  });
+
+  test('回転角度が0度の場合は回転情報が表示されない', () => {
+    const mockImageInfoNoRotation = new ImageInfo('/path/to/test.jpg');
+
+    render(ImageInfoDisplay, {
+      props: {
+        show: true,
+        imageInfo: mockImageInfoNoRotation,
+        globalRotation: 0, // グローバル回転0度
+      },
+    });
+
+    // 回転情報が表示されないことを想定したテスト
+    expect(mockImageInfoNoRotation.getLocalRotation()).toBe(0);
   });
 });

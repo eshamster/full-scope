@@ -36,11 +36,16 @@
     align-items: center;
     overflow: hidden;
   }
+  .cell {
+    position: relative;
+  }
+
   .cell img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center;
+    object-fit: contain; /* アスペクト比を維持しつつコンテナに収める */
     /* ドラッグ操作を無効化 */
     -webkit-user-drag: none;
     -khtml-user-drag: none;
@@ -74,7 +79,7 @@
   import { listen } from '@tauri-apps/api/event';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { onMount, onDestroy } from 'svelte';
-  import { ImageInfo } from '@/routes/viewer/image-info';
+  import { ImageInfo } from '@/routes/viewer/image-info.svelte';
   import { ImageInfoManager } from '@/routes/viewer/image-info-manager.svelte';
   import { DialogController } from '@/routes/viewer/dialog-controller.svelte';
   import { FileController } from '@/routes/viewer/file-controller';
@@ -156,9 +161,136 @@
   // コントローラーにタグ編集コールバックを設定
   controller.setOnEditTags(startTagEdit);
 
-  let currentImages = $derived<ImageInfo[]>(
-    manager.getCurrentList(viewerController.getRows() * viewerController.getCols())
-  );
+  let currentImages = $derived.by(() => {
+    try {
+      const listLength = manager.getListLength();
+
+      if (listLength > 0) {
+        const cellCount = viewerController.getRows() * viewerController.getCols();
+        const images = manager.getCurrentList(cellCount);
+        return images;
+      } else {
+        return [];
+      }
+    } catch {
+      return [];
+    }
+  });
+
+  // グローバル回転状態を監視
+  let globalRotation = $derived(manager.getGlobalRotation());
+
+  // 回転状態をリアクティブに監視（画像が存在する場合のみ）
+  let rotationStates = $derived.by(() => {
+    if (currentImages.length === 0) return [];
+    return currentImages.map(img => manager.getTotalRotation(img));
+  });
+
+  // 回転状態が変化した時に自動的にサイズを再計算
+  $effect(() => {
+    // 画像が存在し、回転状態が変化した場合のみ実行
+    if (rotationStates.length > 0) {
+      // DOM更新後に実行するため少し遅延
+      setTimeout(() => {
+        recalculateVisibleImageSizes();
+      }, 0);
+    }
+  });
+
+  // 動的画像サイジングシステム
+
+  // セルサイズ計算
+  function getCellDimensions() {
+    return {
+      width: window.innerWidth / viewerController.getCols(),
+      height: window.innerHeight / viewerController.getRows(),
+    };
+  }
+
+  // 画像の最適サイズ計算
+  function calculateOptimalImageSize(
+    naturalWidth: number,
+    naturalHeight: number,
+    rotation: number
+  ): { actualImageWidth: number; actualImageHeight: number } {
+    const cell = getCellDimensions();
+
+    // 回転を考慮した有効画像サイズ
+    const effectiveWidth = rotation % 180 === 0 ? naturalWidth : naturalHeight;
+    const effectiveHeight = rotation % 180 === 0 ? naturalHeight : naturalWidth;
+
+    const scale = Math.min(cell.width / effectiveWidth, cell.height / effectiveHeight);
+
+    // 実際の画像表示サイズを計算
+    const actualImageWidth = naturalWidth * scale;
+    const actualImageHeight = naturalHeight * scale;
+
+    return {
+      actualImageWidth,
+      actualImageHeight,
+    };
+  }
+
+  // 画像の動的スタイル生成
+  function getDynamicImageStyle(img: ImageInfo, element?: HTMLImageElement): string {
+    const rotation = manager.getTotalRotation(img);
+
+    // 画像がまだ読み込まれていない場合の暫定スタイル
+    if (!element || !element.naturalWidth) {
+      const cell = getCellDimensions();
+      const style = `
+        width: ${cell.width}px;
+        height: ${cell.height}px;
+        transform: translate(-50%, -50%) rotate(${rotation}deg);
+      `.trim();
+      return style;
+    }
+
+    // 最適サイズ計算
+    const optimal = calculateOptimalImageSize(
+      element.naturalWidth,
+      element.naturalHeight,
+      rotation
+    );
+
+    // 計算された実際のサイズを使用
+    const style = `
+      width: ${optimal.actualImageWidth}px;
+      height: ${optimal.actualImageHeight}px;
+      object-fit: fill;
+      transform: translate(-50%, -50%) rotate(${rotation}deg);
+    `.trim();
+    return style;
+  }
+
+  // 画像ロード後のサイズ更新
+  function updateImageSize(event: Event, img: ImageInfo) {
+    const imgElement = event.target as HTMLImageElement;
+
+    if (!imgElement.naturalWidth || !imgElement.naturalHeight) {
+      console.warn('Image natural size not available:', img.path);
+      return;
+    }
+
+    // 新しいスタイルを適用
+    const newStyle = getDynamicImageStyle(img, imgElement);
+    imgElement.style.cssText = newStyle;
+  }
+
+  // 表示中の全画像のサイズを再計算（回転操作時に呼び出し）
+  function recalculateVisibleImageSizes() {
+    const imgElements = document.querySelectorAll('.cell img');
+
+    imgElements.forEach((imgElement, index) => {
+      if (index < currentImages.length && imgElement instanceof HTMLImageElement) {
+        const img = currentImages[index];
+        if (imgElement.naturalWidth && imgElement.naturalHeight) {
+          const newStyle = getDynamicImageStyle(img, imgElement);
+          imgElement.style.cssText = newStyle;
+        }
+      }
+    });
+  }
 
   // コアプロセスから画像のパスを受け取ったときの処理
   function handleImagePaths(resp: ImagePathsResp) {
@@ -311,7 +443,13 @@
     >
       {#each currentImages as img, i (i)}
         <div class="cell">
-          <img id="image" src={convertFileSrc(img.path)} alt={img.path} />
+          <img
+            id="image"
+            src={convertFileSrc(img.path)}
+            alt={img.path}
+            style={getDynamicImageStyle(img)}
+            onload={event => updateImageSize(event, img)}
+          />
         </div>
       {/each}
     </div>
@@ -341,5 +479,6 @@
   <ImageInfoDisplay
     show={manager.isImageInfoDisplayed()}
     imageInfo={manager.getListLength() > 0 ? manager.getCurrent() : null}
+    {globalRotation}
   ></ImageInfoDisplay>
 </main>

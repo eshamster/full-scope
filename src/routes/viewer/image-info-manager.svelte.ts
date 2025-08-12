@@ -1,4 +1,4 @@
-import { ImageInfo } from './image-info';
+import { ImageInfo } from './image-info.svelte';
 import { Semaphore } from 'await-semaphore';
 import { ImageShowHistory } from './image-show-history';
 import { SvelteSet, SvelteMap } from 'svelte/reactivity';
@@ -20,6 +20,7 @@ export class ImageInfoManager {
   private activeFilterTags = new SvelteSet<string>();
   private isFiltered: boolean = $state(false);
   private tagController: TagController | null = null;
+  private globalRotation: number = $state(0); // グローバル回転角度
 
   public setTagController(tagController: TagController): void {
     this.tagController = tagController;
@@ -283,5 +284,36 @@ export class ImageInfoManager {
     );
 
     return imageTagsMap;
+  }
+
+  // --- 回転機能関連 --- //
+
+  // グローバル回転操作
+  public rotateGlobalRight(): void {
+    this.globalRotation = (this.globalRotation + 90) % 360;
+  }
+
+  public rotateGlobalLeft(): void {
+    this.globalRotation = (this.globalRotation - 90 + 360) % 360;
+  }
+
+  public getGlobalRotation(): number {
+    return this.globalRotation;
+  }
+
+  // グリッド表示対応のローカル回転操作
+  public rotateVisibleLocalRight(visibleCount: number): void {
+    const visibleImages = this.getCurrentList(visibleCount);
+    visibleImages.forEach(image => image.rotateLocalRight());
+  }
+
+  public rotateVisibleLocalLeft(visibleCount: number): void {
+    const visibleImages = this.getCurrentList(visibleCount);
+    visibleImages.forEach(image => image.rotateLocalLeft());
+  }
+
+  // 合成回転角度の取得
+  public getTotalRotation(imageInfo: ImageInfo): number {
+    return (this.globalRotation + imageInfo.getLocalRotation()) % 360;
   }
 }
