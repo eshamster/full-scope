@@ -550,4 +550,191 @@ describe('ImageInfoManager', () => {
       });
     });
   });
+
+  describe('rotation functionality', () => {
+    beforeEach(async () => {
+      await manager.addImages(testImages);
+    });
+
+    describe('global rotation', () => {
+      it('should initialize with 0 degree global rotation', () => {
+        expect(manager.getGlobalRotation()).toBe(0);
+      });
+
+      it('should rotate globally right by 90 degrees', () => {
+        manager.rotateGlobalRight();
+        expect(manager.getGlobalRotation()).toBe(90);
+
+        manager.rotateGlobalRight();
+        expect(manager.getGlobalRotation()).toBe(180);
+
+        manager.rotateGlobalRight();
+        expect(manager.getGlobalRotation()).toBe(270);
+
+        manager.rotateGlobalRight();
+        expect(manager.getGlobalRotation()).toBe(0);
+      });
+
+      it('should rotate globally left by 90 degrees', () => {
+        manager.rotateGlobalLeft();
+        expect(manager.getGlobalRotation()).toBe(270);
+
+        manager.rotateGlobalLeft();
+        expect(manager.getGlobalRotation()).toBe(180);
+
+        manager.rotateGlobalLeft();
+        expect(manager.getGlobalRotation()).toBe(90);
+
+        manager.rotateGlobalLeft();
+        expect(manager.getGlobalRotation()).toBe(0);
+      });
+
+      it('should handle combined global rotations', () => {
+        manager.rotateGlobalRight();
+        manager.rotateGlobalRight();
+        expect(manager.getGlobalRotation()).toBe(180);
+
+        manager.rotateGlobalLeft();
+        expect(manager.getGlobalRotation()).toBe(90);
+
+        manager.rotateGlobalLeft();
+        manager.rotateGlobalLeft();
+        expect(manager.getGlobalRotation()).toBe(270);
+      });
+    });
+
+    describe('local rotation for visible images', () => {
+      it('should rotate visible local right', () => {
+        // Test with visibleCount = 1 (only current image)
+        manager.rotateVisibleLocalRight(1);
+
+        const currentImage = manager.getCurrent();
+        expect(currentImage.getLocalRotation()).toBe(90);
+      });
+
+      it('should rotate visible local left', () => {
+        // Test with visibleCount = 1 (only current image)
+        manager.rotateVisibleLocalLeft(1);
+
+        const currentImage = manager.getCurrent();
+        expect(currentImage.getLocalRotation()).toBe(270);
+      });
+
+      it('should rotate multiple visible images', () => {
+        // Test with visibleCount = 2 (current and next image)
+        manager.rotateVisibleLocalRight(2);
+
+        const firstImage = manager.getList()[0];
+        const secondImage = manager.getList()[1];
+
+        expect(firstImage.getLocalRotation()).toBe(90);
+        expect(secondImage.getLocalRotation()).toBe(90);
+        // Third image should not be affected
+        expect(manager.getList()[2].getLocalRotation()).toBe(0);
+      });
+
+      it('should handle visibleCount exceeding available images', () => {
+        // Move to position 2 (only one image remaining)
+        manager.gotoAt(3);
+
+        manager.rotateVisibleLocalRight(5);
+
+        // Only the current (last) image should be rotated
+        const lastImage = manager.getCurrent();
+        expect(lastImage.getLocalRotation()).toBe(90);
+
+        // Earlier images should not be affected
+        expect(manager.getList()[0].getLocalRotation()).toBe(0);
+        expect(manager.getList()[1].getLocalRotation()).toBe(0);
+      });
+    });
+
+    describe('total rotation calculation', () => {
+      it('should calculate total rotation correctly', () => {
+        const image = manager.getCurrent();
+
+        // Initial state - no rotation
+        expect(manager.getTotalRotation(image)).toBe(0);
+
+        // Global rotation only
+        manager.rotateGlobalRight();
+        expect(manager.getTotalRotation(image)).toBe(90);
+
+        // Local rotation only (reset global first)
+        manager.rotateGlobalLeft();
+        image.rotateLocalRight();
+        expect(manager.getTotalRotation(image)).toBe(90);
+
+        // Both global and local rotation
+        manager.rotateGlobalRight();
+        image.rotateLocalRight();
+        expect(manager.getTotalRotation(image)).toBe(270);
+      });
+
+      it('should handle angle wrapping in total rotation', () => {
+        const image = manager.getCurrent();
+
+        // Set both to 270 degrees
+        manager.rotateGlobalLeft(); // 270
+        image.rotateLocalLeft(); // 270
+
+        // Total should be (270 + 270) % 360 = 180
+        expect(manager.getTotalRotation(image)).toBe(180);
+      });
+
+      it('should maintain independent rotation per image', () => {
+        const firstImage = manager.getList()[0];
+        const secondImage = manager.getList()[1];
+        const thirdImage = manager.getList()[2];
+
+        // Rotate individual images differently
+        firstImage.rotateLocalRight(); // 90
+        secondImage.rotateLocalRight();
+        secondImage.rotateLocalRight(); // 180
+        // thirdImage remains at 0
+
+        // Set global rotation
+        manager.rotateGlobalRight(); // 90
+
+        // Check total rotations
+        expect(manager.getTotalRotation(firstImage)).toBe(180); // 90 + 90
+        expect(manager.getTotalRotation(secondImage)).toBe(270); // 90 + 180
+        expect(manager.getTotalRotation(thirdImage)).toBe(90); // 90 + 0
+      });
+    });
+
+    it('should maintain rotation independent of navigation', () => {
+      const firstImage = manager.getCurrent();
+
+      // Set rotation state
+      manager.rotateGlobalRight();
+      firstImage.rotateLocalRight();
+
+      // Navigate away and back
+      manager.gotoNext();
+      manager.gotoPrev();
+
+      // Rotation should be preserved
+      expect(manager.getGlobalRotation()).toBe(90);
+      expect(firstImage.getLocalRotation()).toBe(90);
+      expect(manager.getTotalRotation(firstImage)).toBe(180);
+    });
+
+    it('should maintain rotation independent of other operations', () => {
+      const image = manager.getCurrent();
+
+      // Set rotation state
+      manager.rotateGlobalRight();
+      image.rotateLocalRight();
+
+      // Perform other operations
+      image.bookmark();
+      manager.toggleImageInfoDisplay();
+
+      // Rotation should be preserved
+      expect(manager.getGlobalRotation()).toBe(90);
+      expect(image.getLocalRotation()).toBe(90);
+      expect(manager.getTotalRotation(image)).toBe(180);
+    });
+  });
 });

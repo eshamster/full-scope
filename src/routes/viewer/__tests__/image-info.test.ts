@@ -46,4 +46,72 @@ describe('ImageInfo', () => {
       expect(image.path).toBe(path);
     });
   });
+
+  describe('local rotation functionality', () => {
+    it('should initialize with 0 degree rotation', () => {
+      const image = new ImageInfo('/path/to/image.jpg');
+
+      expect(image.getLocalRotation()).toBe(0);
+    });
+
+    it('should rotate right by 90 degrees', () => {
+      const image = new ImageInfo('/path/to/image.jpg');
+
+      image.rotateLocalRight();
+      expect(image.getLocalRotation()).toBe(90);
+
+      image.rotateLocalRight();
+      expect(image.getLocalRotation()).toBe(180);
+
+      image.rotateLocalRight();
+      expect(image.getLocalRotation()).toBe(270);
+
+      image.rotateLocalRight();
+      expect(image.getLocalRotation()).toBe(0);
+    });
+
+    it('should rotate left by 90 degrees', () => {
+      const image = new ImageInfo('/path/to/image.jpg');
+
+      image.rotateLocalLeft();
+      expect(image.getLocalRotation()).toBe(270);
+
+      image.rotateLocalLeft();
+      expect(image.getLocalRotation()).toBe(180);
+
+      image.rotateLocalLeft();
+      expect(image.getLocalRotation()).toBe(90);
+
+      image.rotateLocalLeft();
+      expect(image.getLocalRotation()).toBe(0);
+    });
+
+    it('should handle combined right and left rotations', () => {
+      const image = new ImageInfo('/path/to/image.jpg');
+
+      image.rotateLocalRight();
+      image.rotateLocalRight();
+      expect(image.getLocalRotation()).toBe(180);
+
+      image.rotateLocalLeft();
+      expect(image.getLocalRotation()).toBe(90);
+
+      image.rotateLocalLeft();
+      image.rotateLocalLeft();
+      expect(image.getLocalRotation()).toBe(270);
+    });
+
+    it('should maintain rotation independent of bookmark operations', () => {
+      const image = new ImageInfo('/path/to/image.jpg');
+
+      image.rotateLocalRight();
+      image.bookmark();
+      expect(image.getLocalRotation()).toBe(90);
+      expect(image.isBookmarked()).toBe(true);
+
+      image.rotateLocalLeft();
+      expect(image.getLocalRotation()).toBe(0);
+      expect(image.isBookmarked()).toBe(true);
+    });
+  });
 });
