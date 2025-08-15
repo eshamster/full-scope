@@ -38,14 +38,10 @@ export class ImageInfo {
   }
 
   public movePosition(deltaX: number, deltaY: number, rotation: number): void {
-    const radians = (rotation * Math.PI) / 180;
-
-    // 回転を考慮した座標変換（スケール補正は行わない）
-    const adjustedDeltaX = deltaX * Math.cos(-radians) - deltaY * Math.sin(-radians);
-    const adjustedDeltaY = deltaX * Math.sin(-radians) + deltaY * Math.cos(-radians);
-
-    this.positionX += adjustedDeltaX;
-    this.positionY += adjustedDeltaY;
+    // 画面上のドラッグ方向にそのまま移動（回転補正なし）
+    // これにより最も直感的な操作感を実現
+    this.positionX += deltaX;
+    this.positionY += deltaY;
   }
 
   public resetTransform(): void {

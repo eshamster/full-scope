@@ -123,18 +123,14 @@ export class Controler {
 
 ### 1. 平行移動の座標変換
 
-回転を考慮した移動量の計算：
+画面上のドラッグ方向にそのまま移動する直感的な実装：
 
 ```typescript
 public movePosition(deltaX: number, deltaY: number, rotation: number): void {
-  const radians = (rotation * Math.PI) / 180;
-  
-  // 回転を考慮した座標変換
-  const adjustedDeltaX = deltaX * Math.cos(-radians) - deltaY * Math.sin(-radians);
-  const adjustedDeltaY = deltaX * Math.sin(-radians) + deltaY * Math.cos(-radians);
-  
-  this.positionX += adjustedDeltaX;
-  this.positionY += adjustedDeltaY;
+  // 画面上のドラッグ方向にそのまま移動（回転補正なし）
+  // これにより最も直感的な操作感を実現
+  this.positionX += deltaX;
+  this.positionY += deltaY;
 }
 ```
 
