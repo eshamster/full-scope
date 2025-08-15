@@ -69,7 +69,7 @@ export class ImageInfo {
   public scaleUp(): void                       // +10%
   public scaleDown(): void                     // -10%（下限10%）
   public movePosition(deltaX, deltaY, rotation): void
-  public resetTransform(): void
+  public resetTransform(): void                 // 拡大率、位置、ローカル回転をリセット
   
   // ゲッター
   public getScalePercent(): number

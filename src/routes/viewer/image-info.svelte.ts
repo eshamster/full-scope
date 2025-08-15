@@ -48,6 +48,7 @@ export class ImageInfo {
     this.scalePercent = 100;
     this.positionX = 0;
     this.positionY = 0;
+    this.localRotation = 0;
   }
 
   // ゲッター
