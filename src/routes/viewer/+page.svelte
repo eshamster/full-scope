@@ -22,6 +22,11 @@
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+    /* 選択動作を無効化 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
 
   .grid {
@@ -376,6 +381,7 @@
   function handleMouseDown(event: MouseEvent) {
     // 編集モード時は左クリックでドラッグ開始
     if (editModeController.isInEditMode() && event.button === 0) {
+      event.preventDefault(); // 選択動作を抑制
       isDragging = true;
       dragStartX = event.clientX;
       dragStartY = event.clientY;
