@@ -38,12 +38,11 @@ export class ImageInfo {
   }
 
   public movePosition(deltaX: number, deltaY: number, rotation: number): void {
-    const scaleRatio = this.scalePercent / 100;
     const radians = (rotation * Math.PI) / 180;
 
-    // 回転を考慮した座標変換
-    const adjustedDeltaX = (deltaX * Math.cos(-radians) - deltaY * Math.sin(-radians)) / scaleRatio;
-    const adjustedDeltaY = (deltaX * Math.sin(-radians) + deltaY * Math.cos(-radians)) / scaleRatio;
+    // 回転を考慮した座標変換（スケール補正は行わない）
+    const adjustedDeltaX = deltaX * Math.cos(-radians) - deltaY * Math.sin(-radians);
+    const adjustedDeltaY = deltaX * Math.sin(-radians) + deltaY * Math.cos(-radians);
 
     this.positionX += adjustedDeltaX;
     this.positionY += adjustedDeltaY;

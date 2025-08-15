@@ -123,16 +123,15 @@ export class Controler {
 
 ### 1. 平行移動の座標変換
 
-回転と拡大率を考慮した移動量の計算：
+回転を考慮した移動量の計算：
 
 ```typescript
 public movePosition(deltaX: number, deltaY: number, rotation: number): void {
-  const scaleRatio = this.scalePercent / 100;
   const radians = (rotation * Math.PI) / 180;
   
   // 回転を考慮した座標変換
-  const adjustedDeltaX = (deltaX * Math.cos(-radians) - deltaY * Math.sin(-radians)) / scaleRatio;
-  const adjustedDeltaY = (deltaX * Math.sin(-radians) + deltaY * Math.cos(-radians)) / scaleRatio;
+  const adjustedDeltaX = deltaX * Math.cos(-radians) - deltaY * Math.sin(-radians);
+  const adjustedDeltaY = deltaX * Math.sin(-radians) + deltaY * Math.cos(-radians);
   
   this.positionX += adjustedDeltaX;
   this.positionY += adjustedDeltaY;
