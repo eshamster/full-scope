@@ -230,7 +230,7 @@ describe('ImageInfo', () => {
         { x: 10, y: 5 },
         { x: -3, y: 8 },
         { x: 7, y: -12 },
-        { x: -5, y: 2 }
+        { x: -5, y: 2 },
       ];
 
       let expectedX = 0;

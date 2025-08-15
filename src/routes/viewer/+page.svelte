@@ -547,7 +547,7 @@
       <div id="edit-mode-info">
         <div class="edit-mode-title">編集モード</div>
         <ul class="edit-mode-instructions">
-          {#each editModeController.getEditModeInstructions() as instruction}
+          {#each editModeController.getEditModeInstructions() as instruction, index (index)}
             <li>{instruction}</li>
           {/each}
         </ul>

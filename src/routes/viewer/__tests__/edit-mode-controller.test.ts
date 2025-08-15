@@ -35,10 +35,10 @@ describe('EditModeController', () => {
 
       for (let i = 0; i < 5; i++) {
         expect(controller.isInEditMode()).toBe(false);
-        
+
         controller.enterEditMode();
         expect(controller.isInEditMode()).toBe(true);
-        
+
         controller.exitEditMode();
         expect(controller.isInEditMode()).toBe(false);
       }
@@ -130,7 +130,7 @@ describe('EditModeController', () => {
         'ドラッグ: 移動',
         'ホイール: 拡大縮小',
         'Ctrl+R: リセット',
-        'Esc: 終了'
+        'Esc: 終了',
       ];
 
       expect(instructions).toEqual(expectedInstructions);
@@ -162,7 +162,7 @@ describe('EditModeController', () => {
       for (let i = 0; i < 100; i++) {
         controller.enterEditMode();
         expect(controller.isInEditMode()).toBe(true);
-        
+
         controller.exitEditMode();
         expect(controller.isInEditMode()).toBe(false);
       }
