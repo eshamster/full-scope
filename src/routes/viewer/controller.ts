@@ -5,6 +5,7 @@ import { ToastController } from './toast-controller.svelte';
 import { ViewerController } from './viewer-controller.svelte';
 import { GotoDialogController } from './goto-dialog-controller.svelte';
 import { FilterDialogController } from './filter-dialog-controller.svelte';
+import { EditModeController } from './edit-mode-controller.svelte';
 
 export type Operation =
   | 'next'
@@ -28,7 +29,14 @@ export type Operation =
   | 'rotateGlobalRight'
   | 'rotateGlobalLeft'
   | 'rotateLocalRight'
-  | 'rotateLocalLeft';
+  | 'rotateLocalLeft'
+  | 'enterEditMode'
+  | 'exitEditMode'
+  | 'scaleUp'
+  | 'scaleDown'
+  | 'resetTransform';
+
+export type Mode = 'View' | 'Edit';
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
@@ -39,7 +47,8 @@ type keyConfig = {
 };
 
 // TODO: ファイルから読み込むようにする
-const keyConfigs: keyConfig[] = [
+const viewModeKeyConfigs: keyConfig[] = [
+  { key: 'e', operation: 'enterEditMode', modifierKeys: ['ctrl', 'shift'] },
   { key: 'ArrowRight', operation: 'next', modifierKeys: [] },
   { key: 'WheelDown', operation: 'next', modifierKeys: [] },
   { key: 'x', operation: 'next', modifierKeys: [] },
@@ -75,8 +84,20 @@ const keyConfigs: keyConfig[] = [
   { key: 'b', operation: 'rotateLocalLeft', modifierKeys: ['ctrl', 'shift'] },
 ];
 
+const editModeKeyConfigs: keyConfig[] = [
+  { key: 'Escape', operation: 'exitEditMode', modifierKeys: [] },
+  { key: 'e', operation: 'exitEditMode', modifierKeys: ['ctrl', 'shift'] },
+  { key: 'r', operation: 'resetTransform', modifierKeys: ['ctrl'] },
+  { key: 'WheelUp', operation: 'scaleUp', modifierKeys: [] },
+  { key: 'WheelDown', operation: 'scaleDown', modifierKeys: [] },
+  { key: 'ArrowRight', operation: 'rotateLocalRight', modifierKeys: ['ctrl'] },
+  { key: 'ArrowLeft', operation: 'rotateLocalLeft', modifierKeys: ['ctrl'] },
+  { key: 'f', operation: 'rotateLocalRight', modifierKeys: ['ctrl', 'shift'] },
+  { key: 'b', operation: 'rotateLocalLeft', modifierKeys: ['ctrl', 'shift'] },
+];
+
 export class Controler {
-  private keyToOperations = new Map<string, Operation>();
+  private keyToOperations = new Map<Mode, Map<string, Operation>>();
   private modfierKeyMap = new Map<ModifierKey, boolean>();
   private onEditTags?: () => void;
   private isTagEditorOpen = false;
@@ -88,9 +109,14 @@ export class Controler {
     private toastController: ToastController,
     private viewerController: ViewerController,
     private gotoDialogController: GotoDialogController,
-    private filterDialogController: FilterDialogController
+    private filterDialogController: FilterDialogController,
+    private editModeController: EditModeController
   ) {
-    this.readKeyConfigs(keyConfigs);
+    this.keyToOperations.set('View', new Map<string, Operation>());
+    this.keyToOperations.set('Edit', new Map<string, Operation>());
+
+    this.readKeyConfigs('View', viewModeKeyConfigs);
+    this.readKeyConfigs('Edit', editModeKeyConfigs);
   }
 
   public setOnEditTags(callback: () => void): void {
@@ -101,14 +127,18 @@ export class Controler {
     this.isTagEditorOpen = isOpen;
   }
 
-  private readKeyConfigs(configs: keyConfig[]): void {
+  private readKeyConfigs(mode: Mode, configs: keyConfig[]): void {
     configs.forEach(({ key, operation, modifierKeys }) => {
-      this.setKeyBind(this.keyToString(key, modifierKeys), operation);
+      this.setKeyBind(mode, this.keyToString(key, modifierKeys), operation);
     });
   }
 
-  private setKeyBind(key: string, operation: Operation): void {
-    this.keyToOperations.set(key.toLowerCase(), operation);
+  private setKeyBind(mode: Mode, key: string, operation: Operation): void {
+    const modeMap = this.keyToOperations.get(mode);
+    if (!modeMap) {
+      throw new Error(`Mode map not found for mode: ${mode}. Controller not properly initialized.`);
+    }
+    modeMap.set(key.toLowerCase(), operation);
   }
 
   public operateByKey(rawKey: string): void {
@@ -118,10 +148,18 @@ export class Controler {
     }
 
     const key = this.keyToString(rawKey);
+    const currentMode: Mode = this.editModeController.isInEditMode() ? 'Edit' : 'View';
+    const modeMap = this.keyToOperations.get(currentMode);
 
-    const operation = this.keyToOperations.get(key);
+    if (!modeMap) {
+      throw new Error(
+        `Mode map not found for mode: ${currentMode}. Controller not properly initialized.`
+      );
+    }
+
+    const operation = modeMap.get(key);
     console.log(
-      `Controller operateByKey: key=${key}, operation=${operation}, gotoDialogShow=${this.gotoDialogController.isShow()}`
+      `Controller operateByKey: mode=${currentMode}, key=${key}, operation=${operation}, gotoDialogShow=${this.gotoDialogController.isShow()}`
     ); // debug
     if (operation) {
       this.operate(operation);
@@ -236,6 +274,30 @@ export class Controler {
       case 'rotateLocalLeft': {
         const cellCount = this.viewerController.getCells();
         this.imageInfoManager.rotateVisibleLocalLeft(cellCount);
+        break;
+      }
+      case 'enterEditMode':
+        this.editModeController.enterEditMode();
+        this.toastController.showToast('編集モードを開始しました');
+        break;
+      case 'exitEditMode':
+        this.editModeController.exitEditMode();
+        this.toastController.showToast('編集モードを終了しました');
+        break;
+      case 'scaleUp': {
+        const cellCount = this.viewerController.getCells();
+        this.imageInfoManager.scaleVisibleUp(cellCount);
+        break;
+      }
+      case 'scaleDown': {
+        const cellCount = this.viewerController.getCells();
+        this.imageInfoManager.scaleVisibleDown(cellCount);
+        break;
+      }
+      case 'resetTransform': {
+        const cellCount = this.viewerController.getCells();
+        this.imageInfoManager.resetVisibleTransform(cellCount);
+        this.toastController.showToast('変形をリセットしました');
         break;
       }
     }

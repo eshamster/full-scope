@@ -22,6 +22,11 @@
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+    /* 選択動作を無効化 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
 
   .grid {
@@ -71,6 +76,35 @@
     background-color: rgba(255, 255, 255, 0.5);
     padding: 0.2em;
   }
+
+  #edit-mode-info {
+    position: absolute;
+    top: 2em;
+    left: 0;
+    color: black;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 0.5em;
+    font-size: 0.9em;
+    border-radius: 4px;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .edit-mode-title {
+    font-weight: bold;
+    margin-bottom: 0.3em;
+  }
+
+  .edit-mode-instructions {
+    margin: 0;
+    padding-left: 1.2em;
+    list-style-type: disc;
+  }
+
+  .edit-mode-instructions li {
+    margin: 0.1em 0;
+    line-height: 1.2;
+  }
 </style>
 
 <script lang="ts">
@@ -94,6 +128,7 @@
   import CornerToast from '@/routes/viewer/CornerToast.svelte';
   import TagEditor from './TagEditor.svelte';
   import { TagController } from './tag-controller.svelte';
+  import { EditModeController } from './edit-mode-controller.svelte';
   import ImageInfoDisplay from './image-info-display.svelte';
 
   getCurrentWindow().setFullscreen(true);
@@ -111,6 +146,7 @@
   const toastController = new ToastController();
   const viewerController = new ViewerController();
   const tagController = new TagController(toastController);
+  const editModeController = new EditModeController();
   const controller = new Controler(
     manager,
     dialogController,
@@ -118,7 +154,8 @@
     toastController,
     viewerController,
     gotoDialogController,
-    filterDialogController
+    filterDialogController,
+    editModeController
   );
 
   // ImageInfoManagerにTagControllerを設定
@@ -127,6 +164,11 @@
   // タグ編集用の状態
   let showTagEditor = $state(false);
   let currentImageTags = $state<string[]>([]);
+
+  // ドラッグ処理用の状態
+  let isDragging = $state(false);
+  let dragStartX = $state(0);
+  let dragStartY = $state(0);
 
   // タグ編集を開始する関数
   async function startTagEdit() {
@@ -186,10 +228,31 @@
     return currentImages.map(img => manager.getTotalRotation(img));
   });
 
+  // 編集操作状態をリアクティブに監視（スケール・位置変化の検知用）
+  let editStates = $derived.by(() => {
+    if (currentImages.length === 0) return [];
+    return currentImages.map(img => ({
+      scale: img.getScalePercent(),
+      posX: img.getPositionX(),
+      posY: img.getPositionY(),
+    }));
+  });
+
   // 回転状態が変化した時に自動的にサイズを再計算
   $effect(() => {
     // 画像が存在し、回転状態が変化した場合のみ実行
     if (rotationStates.length > 0) {
+      // DOM更新後に実行するため少し遅延
+      setTimeout(() => {
+        recalculateVisibleImageSizes();
+      }, 0);
+    }
+  });
+
+  // 編集操作後にサイズを再計算
+  $effect(() => {
+    // 編集モード中の変形操作後にスタイルを再計算
+    if (editStates.length > 0 && editModeController.isInEditMode()) {
       // DOM更新後に実行するため少し遅延
       setTimeout(() => {
         recalculateVisibleImageSizes();
@@ -234,6 +297,9 @@
   // 画像の動的スタイル生成
   function getDynamicImageStyle(img: ImageInfo, element?: HTMLImageElement): string {
     const rotation = manager.getTotalRotation(img);
+    const scaleRatio = img.getScaleRatio();
+    const posX = img.getPositionX();
+    const posY = img.getPositionY();
 
     // 画像がまだ読み込まれていない場合の暫定スタイル
     if (!element || !element.naturalWidth) {
@@ -241,7 +307,9 @@
       const style = `
         width: ${cell.width}px;
         height: ${cell.height}px;
-        transform: translate(-50%, -50%) rotate(${rotation}deg);
+        transform: translate(calc(-50% + ${posX}px), calc(-50% + ${posY}px)) 
+                   rotate(${rotation}deg) 
+                   scale(${scaleRatio});
       `.trim();
       return style;
     }
@@ -258,7 +326,9 @@
       width: ${optimal.actualImageWidth}px;
       height: ${optimal.actualImageHeight}px;
       object-fit: fill;
-      transform: translate(-50%, -50%) rotate(${rotation}deg);
+      transform: translate(calc(-50% + ${posX}px), calc(-50% + ${posY}px)) 
+                 rotate(${rotation}deg) 
+                 scale(${scaleRatio});
     `.trim();
     return style;
   }
@@ -311,7 +381,13 @@
     ); // デバッグログ
 
     if (event.key === 'Escape') {
-      getCurrentWindow().close();
+      // 編集モード中はControllerに処理を委譲、通常モードではウィンドウを閉じる
+      if (editModeController.isInEditMode()) {
+        // 編集モード終了処理はController側で行う
+      } else {
+        getCurrentWindow().close();
+        return; // 以降の処理をスキップ
+      }
     }
 
     // 開発者ツール（Ctrl+Shift+I）のみ許可、それ以外のWebViewデフォルトショートカットは無効化
@@ -349,6 +425,16 @@
   }
 
   function handleMouseDown(event: MouseEvent) {
+    // 編集モード時は左クリックでドラッグ開始
+    if (editModeController.isInEditMode() && event.button === 0) {
+      event.preventDefault(); // 選択動作を抑制
+      isDragging = true;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+      return;
+    }
+
+    // 通常モードの処理
     // ドラッグ操作を無効化
     event.preventDefault();
 
@@ -366,11 +452,32 @@
     }
   }
   function handleMouseUp(event: MouseEvent) {
+    // 編集モードでドラッグ中の場合はドラッグ終了
+    if (editModeController.isInEditMode() && event.button === 0 && isDragging) {
+      isDragging = false;
+      return;
+    }
+
     switch (event.button) {
       case 0:
         controller.upModifierKey('shift');
         break;
     }
+  }
+
+  function handleMouseMove(event: MouseEvent) {
+    if (!isDragging || !editModeController.isInEditMode()) return;
+
+    const deltaX = event.clientX - dragStartX;
+    const deltaY = event.clientY - dragStartY;
+
+    // 表示中の全画像を移動
+    currentImages.forEach(img => {
+      img.movePosition(deltaX, deltaY);
+    });
+
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
   }
 
   function handleWheel(event: WheelEvent) {
@@ -408,6 +515,9 @@
     document.addEventListener('mouseup', event => {
       handleMouseUp(event);
     });
+    document.addEventListener('mousemove', event => {
+      handleMouseMove(event);
+    });
     document.addEventListener('wheel', event => {
       handleWheel(event);
     });
@@ -433,6 +543,16 @@
     <div id="page">
       {manager.getCaret() + 1} / {manager.getListLength()}
     </div>
+    {#if editModeController.isInEditMode()}
+      <div id="edit-mode-info">
+        <div class="edit-mode-title">編集モード</div>
+        <ul class="edit-mode-instructions">
+          {#each editModeController.getEditModeInstructions() as instruction, index (index)}
+            <li>{instruction}</li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
     <div id="debug"></div>
     <div
       class="grid"

@@ -7,6 +7,7 @@ import { FilterDialogController } from '../filter-dialog-controller.svelte';
 import { FileController } from '../file-controller';
 import { ToastController } from '../toast-controller.svelte';
 import { ViewerController } from '../viewer-controller.svelte';
+import { EditModeController } from '../edit-mode-controller.svelte';
 
 describe('Controller - Filter Functionality', () => {
   let controller: Controler;
@@ -17,6 +18,7 @@ describe('Controller - Filter Functionality', () => {
   let fileController: FileController;
   let toastController: ToastController;
   let viewerController: ViewerController;
+  let editModeController: EditModeController;
 
   beforeEach(() => {
     imageInfoManager = new ImageInfoManager();
@@ -26,6 +28,7 @@ describe('Controller - Filter Functionality', () => {
     fileController = new FileController();
     toastController = new ToastController();
     viewerController = new ViewerController();
+    editModeController = new EditModeController();
 
     controller = new Controler(
       imageInfoManager,
@@ -34,7 +37,8 @@ describe('Controller - Filter Functionality', () => {
       toastController,
       viewerController,
       gotoDialogController,
-      filterDialogController
+      filterDialogController,
+      editModeController
     );
 
     // FilterDialogControllerのメソッドをモック
@@ -223,7 +227,8 @@ describe('Controller - Filter Functionality', () => {
         toastController,
         viewerController,
         gotoDialogController,
-        filterDialogController
+        filterDialogController,
+        editModeController
       );
 
       // エラーが発生しないことを確認
