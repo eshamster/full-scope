@@ -209,10 +209,31 @@
     return currentImages.map(img => manager.getTotalRotation(img));
   });
 
+  // 編集操作状態をリアクティブに監視（スケール・位置変化の検知用）
+  let editStates = $derived.by(() => {
+    if (currentImages.length === 0) return [];
+    return currentImages.map(img => ({
+      scale: img.getScalePercent(),
+      posX: img.getPositionX(),
+      posY: img.getPositionY(),
+    }));
+  });
+
   // 回転状態が変化した時に自動的にサイズを再計算
   $effect(() => {
     // 画像が存在し、回転状態が変化した場合のみ実行
     if (rotationStates.length > 0) {
+      // DOM更新後に実行するため少し遅延
+      setTimeout(() => {
+        recalculateVisibleImageSizes();
+      }, 0);
+    }
+  });
+
+  // 編集操作後にサイズを再計算
+  $effect(() => {
+    // 編集モード中の変形操作後にスタイルを再計算
+    if (editStates.length > 0 && editModeController.isInEditMode()) {
       // DOM更新後に実行するため少し遅延
       setTimeout(() => {
         recalculateVisibleImageSizes();
