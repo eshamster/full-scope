@@ -82,9 +82,28 @@
     top: 2em;
     left: 0;
     color: black;
-    background-color: rgba(255, 255, 255, 0.8);
-    padding: 0.2em;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 0.5em;
     font-size: 0.9em;
+    border-radius: 4px;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .edit-mode-title {
+    font-weight: bold;
+    margin-bottom: 0.3em;
+  }
+
+  .edit-mode-instructions {
+    margin: 0;
+    padding-left: 1.2em;
+    list-style-type: disc;
+  }
+
+  .edit-mode-instructions li {
+    margin: 0.1em 0;
+    line-height: 1.2;
   }
 </style>
 
@@ -521,7 +540,12 @@
     </div>
     {#if editModeController.isInEditMode()}
       <div id="edit-mode-info">
-        {editModeController.getEditModeDisplayText()}
+        <div class="edit-mode-title">編集モード</div>
+        <ul class="edit-mode-instructions">
+          {#each editModeController.getEditModeInstructions() as instruction}
+            <li>{instruction}</li>
+          {/each}
+        </ul>
       </div>
     {/if}
     <div id="debug"></div>

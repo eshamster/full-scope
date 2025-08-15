@@ -30,9 +30,9 @@ export class EditModeController {
   }
 
   /**
-   * 編集モードの表示テキストを返す
+   * 編集モードの操作説明を箇条書き配列で返す
    */
-  public getEditModeDisplayText(): string {
-    return '編集モード - ドラッグ:移動 ホイール:拡大縮小 Ctrl+R:リセット Esc:終了';
+  public getEditModeInstructions(): string[] {
+    return ['ドラッグ: 移動', 'ホイール: 拡大縮小', 'Ctrl+R: リセット', 'Esc: 終了'];
   }
 }
