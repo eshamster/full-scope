@@ -28,8 +28,9 @@ imagesize = "0.12"
 [dev-dependencies]
 tempfile = "3.8"
 
-# テスト実行時間短縮のための安全な最適化プロファイル
+# テスト実行時間短縮のための最適化プロファイル
 [profile.test]
 opt-level = 1       # 軽度最適化でテストビルド時間を短縮
+debug = 1          # デバッグ情報を削減してリンク時間を短縮
 incremental = true  # インクリメンタルコンパイルを有効化
 
