@@ -37,7 +37,7 @@ export class ImageInfo {
     this.scalePercent = Math.max(this.scalePercent - 10, 10); // 下限10%
   }
 
-  public movePosition(deltaX: number, deltaY: number, rotation: number): void {
+  public movePosition(deltaX: number, deltaY: number): void {
     // 画面上のドラッグ方向にそのまま移動（回転補正なし）
     // これにより最も直感的な操作感を実現
     this.positionX += deltaX;

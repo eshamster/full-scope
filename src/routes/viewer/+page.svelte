@@ -473,8 +473,7 @@
 
     // 表示中の全画像を移動
     currentImages.forEach(img => {
-      const rotation = manager.getTotalRotation(img);
-      img.movePosition(deltaX, deltaY, rotation);
+      img.movePosition(deltaX, deltaY);
     });
 
     dragStartX = event.clientX;
