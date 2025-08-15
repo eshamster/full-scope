@@ -68,7 +68,7 @@ export class ImageInfo {
   // 変形操作
   public scaleUp(): void                       // +10%
   public scaleDown(): void                     // -10%（下限10%）
-  public movePosition(deltaX, deltaY, currentScale, rotation): void
+  public movePosition(deltaX, deltaY, rotation): void
   public resetTransform(): void
   
   // ゲッター
@@ -126,8 +126,8 @@ export class Controler {
 回転と拡大率を考慮した移動量の計算：
 
 ```typescript
-public movePosition(deltaX: number, deltaY: number, currentScale: number, rotation: number): void {
-  const scaleRatio = currentScale / 100;
+public movePosition(deltaX: number, deltaY: number, rotation: number): void {
+  const scaleRatio = this.scalePercent / 100;
   const radians = (rotation * Math.PI) / 180;
   
   // 回転を考慮した座標変換
@@ -185,9 +185,8 @@ function handleMouseMove(event: MouseEvent) {
   
   // 表示中の全画像を移動
   currentImages.forEach(img => {
-    const currentScale = img.getScalePercent();
     const rotation = manager.getTotalRotation(img);
-    img.movePosition(deltaX, deltaY, currentScale, rotation);
+    img.movePosition(deltaX, deltaY, rotation);
   });
   
   dragStartX = event.clientX;

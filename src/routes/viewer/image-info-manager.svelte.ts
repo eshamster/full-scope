@@ -312,6 +312,23 @@ export class ImageInfoManager {
     visibleImages.forEach(image => image.rotateLocalLeft());
   }
 
+  // グリッド表示対応の拡大・縮小操作
+  public scaleVisibleUp(visibleCount: number): void {
+    const visibleImages = this.getCurrentList(visibleCount);
+    visibleImages.forEach(image => image.scaleUp());
+  }
+
+  public scaleVisibleDown(visibleCount: number): void {
+    const visibleImages = this.getCurrentList(visibleCount);
+    visibleImages.forEach(image => image.scaleDown());
+  }
+
+  // グリッド表示対応の変形リセット操作
+  public resetVisibleTransform(visibleCount: number): void {
+    const visibleImages = this.getCurrentList(visibleCount);
+    visibleImages.forEach(image => image.resetTransform());
+  }
+
   // 合成回転角度の取得
   public getTotalRotation(imageInfo: ImageInfo): number {
     return (this.globalRotation + imageInfo.getLocalRotation()) % 360;

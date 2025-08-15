@@ -7,6 +7,7 @@ import { FilterDialogController } from '../filter-dialog-controller.svelte';
 import { FileController } from '../file-controller';
 import { ToastController } from '../toast-controller.svelte';
 import { ViewerController } from '../viewer-controller.svelte';
+import { EditModeController } from '../edit-mode-controller.svelte';
 
 describe('Controller - Image Info Display', () => {
   let controller: Controler;
@@ -17,6 +18,7 @@ describe('Controller - Image Info Display', () => {
   let fileController: FileController;
   let toastController: ToastController;
   let viewerController: ViewerController;
+  let editModeController: EditModeController;
 
   beforeEach(() => {
     imageInfoManager = new ImageInfoManager();
@@ -26,6 +28,7 @@ describe('Controller - Image Info Display', () => {
     fileController = new FileController();
     toastController = new ToastController();
     viewerController = new ViewerController();
+    editModeController = new EditModeController();
 
     controller = new Controler(
       imageInfoManager,
@@ -34,7 +37,8 @@ describe('Controller - Image Info Display', () => {
       toastController,
       viewerController,
       gotoDialogController,
-      filterDialogController
+      filterDialogController,
+      editModeController
     );
 
     // ImageInfoManagerのメソッドをモック

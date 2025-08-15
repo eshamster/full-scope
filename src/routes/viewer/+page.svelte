@@ -71,6 +71,16 @@
     background-color: rgba(255, 255, 255, 0.5);
     padding: 0.2em;
   }
+
+  #edit-mode-info {
+    position: absolute;
+    top: 2em;
+    left: 0;
+    color: black;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 0.2em;
+    font-size: 0.9em;
+  }
 </style>
 
 <script lang="ts">
@@ -94,6 +104,7 @@
   import CornerToast from '@/routes/viewer/CornerToast.svelte';
   import TagEditor from './TagEditor.svelte';
   import { TagController } from './tag-controller.svelte';
+  import { EditModeController } from './edit-mode-controller.svelte';
   import ImageInfoDisplay from './image-info-display.svelte';
 
   getCurrentWindow().setFullscreen(true);
@@ -111,6 +122,7 @@
   const toastController = new ToastController();
   const viewerController = new ViewerController();
   const tagController = new TagController(toastController);
+  const editModeController = new EditModeController();
   const controller = new Controler(
     manager,
     dialogController,
@@ -118,7 +130,8 @@
     toastController,
     viewerController,
     gotoDialogController,
-    filterDialogController
+    filterDialogController,
+    editModeController
   );
 
   // ImageInfoManagerにTagControllerを設定
@@ -127,6 +140,11 @@
   // タグ編集用の状態
   let showTagEditor = $state(false);
   let currentImageTags = $state<string[]>([]);
+
+  // ドラッグ処理用の状態
+  let isDragging = $state(false);
+  let dragStartX = $state(0);
+  let dragStartY = $state(0);
 
   // タグ編集を開始する関数
   async function startTagEdit() {
@@ -234,6 +252,9 @@
   // 画像の動的スタイル生成
   function getDynamicImageStyle(img: ImageInfo, element?: HTMLImageElement): string {
     const rotation = manager.getTotalRotation(img);
+    const scaleRatio = img.getScaleRatio();
+    const posX = img.getPositionX();
+    const posY = img.getPositionY();
 
     // 画像がまだ読み込まれていない場合の暫定スタイル
     if (!element || !element.naturalWidth) {
@@ -241,7 +262,9 @@
       const style = `
         width: ${cell.width}px;
         height: ${cell.height}px;
-        transform: translate(-50%, -50%) rotate(${rotation}deg);
+        transform: translate(calc(-50% + ${posX}px), calc(-50% + ${posY}px)) 
+                   rotate(${rotation}deg) 
+                   scale(${scaleRatio});
       `.trim();
       return style;
     }
@@ -258,7 +281,9 @@
       width: ${optimal.actualImageWidth}px;
       height: ${optimal.actualImageHeight}px;
       object-fit: fill;
-      transform: translate(-50%, -50%) rotate(${rotation}deg);
+      transform: translate(calc(-50% + ${posX}px), calc(-50% + ${posY}px)) 
+                 rotate(${rotation}deg) 
+                 scale(${scaleRatio});
     `.trim();
     return style;
   }
@@ -349,6 +374,15 @@
   }
 
   function handleMouseDown(event: MouseEvent) {
+    // 編集モード時は左クリックでドラッグ開始
+    if (editModeController.isInEditMode() && event.button === 0) {
+      isDragging = true;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+      return;
+    }
+
+    // 通常モードの処理
     // ドラッグ操作を無効化
     event.preventDefault();
 
@@ -366,11 +400,33 @@
     }
   }
   function handleMouseUp(event: MouseEvent) {
+    // 編集モードでドラッグ中の場合はドラッグ終了
+    if (editModeController.isInEditMode() && event.button === 0 && isDragging) {
+      isDragging = false;
+      return;
+    }
+
     switch (event.button) {
       case 0:
         controller.upModifierKey('shift');
         break;
     }
+  }
+
+  function handleMouseMove(event: MouseEvent) {
+    if (!isDragging || !editModeController.isInEditMode()) return;
+
+    const deltaX = event.clientX - dragStartX;
+    const deltaY = event.clientY - dragStartY;
+
+    // 表示中の全画像を移動
+    currentImages.forEach(img => {
+      const rotation = manager.getTotalRotation(img);
+      img.movePosition(deltaX, deltaY, rotation);
+    });
+
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
   }
 
   function handleWheel(event: WheelEvent) {
@@ -408,6 +464,9 @@
     document.addEventListener('mouseup', event => {
       handleMouseUp(event);
     });
+    document.addEventListener('mousemove', event => {
+      handleMouseMove(event);
+    });
     document.addEventListener('wheel', event => {
       handleWheel(event);
     });
@@ -433,6 +492,11 @@
     <div id="page">
       {manager.getCaret() + 1} / {manager.getListLength()}
     </div>
+    {#if editModeController.isInEditMode()}
+      <div id="edit-mode-info">
+        {editModeController.getEditModeDisplayText()}
+      </div>
+    {/if}
     <div id="debug"></div>
     <div
       class="grid"
