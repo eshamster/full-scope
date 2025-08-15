@@ -381,7 +381,13 @@
     ); // デバッグログ
 
     if (event.key === 'Escape') {
-      getCurrentWindow().close();
+      // 編集モード中はControllerに処理を委譲、通常モードではウィンドウを閉じる
+      if (editModeController.isInEditMode()) {
+        // 編集モード終了処理はController側で行う
+      } else {
+        getCurrentWindow().close();
+        return; // 以降の処理をスキップ
+      }
     }
 
     // 開発者ツール（Ctrl+Shift+I）のみ許可、それ以外のWebViewデフォルトショートカットは無効化
