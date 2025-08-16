@@ -7,6 +7,9 @@ export class ImageInfo {
   private positionX: number = $state(0);
   private positionY: number = $state(0);
 
+  private width: number = 0;
+  private height: number = 0;
+
   constructor(public path: string) {}
 
   public bookmark(): void {
@@ -66,5 +69,22 @@ export class ImageInfo {
 
   public getPositionY(): number {
     return this.positionY;
+  }
+
+  public setImageSize(width: number, height: number): void {
+    this.width = width;
+    this.height = height;
+  }
+
+  public getWidth(): number {
+    return this.width;
+  }
+
+  public getHeight(): number {
+    return this.height;
+  }
+
+  public hasImageSize(): boolean {
+    return this.width > 0 && this.height > 0;
   }
 }

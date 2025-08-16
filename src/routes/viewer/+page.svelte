@@ -112,6 +112,7 @@
   import { getPrevImagePaths } from '@/lib/api/files';
   import { listen } from '@tauri-apps/api/event';
   import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { invoke } from '@tauri-apps/api/core';
   import { onMount, onDestroy } from 'svelte';
   import { ImageInfo } from '@/routes/viewer/image-info.svelte';
   import { ImageInfoManager } from '@/routes/viewer/image-info-manager.svelte';
@@ -272,11 +273,16 @@
 
   // 画像の最適サイズ計算
   function calculateOptimalImageSize(
-    naturalWidth: number,
-    naturalHeight: number,
+    img: ImageInfo,
     rotation: number
-  ): { actualImageWidth: number; actualImageHeight: number } {
+  ): { actualImageWidth: number; actualImageHeight: number } | null {
+    if (!img.hasImageSize()) {
+      return null;
+    }
+
     const cell = getCellDimensions();
+    const naturalWidth = img.getWidth();
+    const naturalHeight = img.getHeight();
 
     // 回転を考慮した有効画像サイズ
     const effectiveWidth = rotation % 180 === 0 ? naturalWidth : naturalHeight;
@@ -294,15 +300,15 @@
     };
   }
 
-  // 画像の動的スタイル生成
-  function getDynamicImageStyle(img: ImageInfo, element?: HTMLImageElement): string {
+  function getDynamicImageStyle(img: ImageInfo): string {
     const rotation = manager.getTotalRotation(img);
     const scaleRatio = img.getScaleRatio();
     const posX = img.getPositionX();
     const posY = img.getPositionY();
 
-    // 画像がまだ読み込まれていない場合の暫定スタイル
-    if (!element || !element.naturalWidth) {
+    const optimal = calculateOptimalImageSize(img, rotation);
+
+    if (!optimal) {
       const cell = getCellDimensions();
       const style = `
         width: ${cell.width}px;
@@ -314,14 +320,6 @@
       return style;
     }
 
-    // 最適サイズ計算
-    const optimal = calculateOptimalImageSize(
-      element.naturalWidth,
-      element.naturalHeight,
-      rotation
-    );
-
-    // 計算された実際のサイズを使用
     const style = `
       width: ${optimal.actualImageWidth}px;
       height: ${optimal.actualImageHeight}px;
@@ -334,16 +332,24 @@
   }
 
   // 画像ロード後のサイズ更新
-  function updateImageSize(event: Event, img: ImageInfo) {
+  async function updateImageSize(event: Event, img: ImageInfo) {
     const imgElement = event.target as HTMLImageElement;
 
-    if (!imgElement.naturalWidth || !imgElement.naturalHeight) {
-      console.warn('Image natural size not available:', img.path);
-      return;
+    if (!img.hasImageSize()) {
+      try {
+        const fileData = await invoke<{ size: number; width: number; height: number }>(
+          'get_file_info',
+          { filePath: img.path }
+        );
+        img.setImageSize(fileData.width, fileData.height);
+      } catch (error) {
+        console.warn('Failed to get image size:', error);
+        return;
+      }
     }
 
     // 新しいスタイルを適用
-    const newStyle = getDynamicImageStyle(img, imgElement);
+    const newStyle = getDynamicImageStyle(img);
     imgElement.style.cssText = newStyle;
   }
 
@@ -354,10 +360,8 @@
     imgElements.forEach((imgElement, index) => {
       if (index < currentImages.length && imgElement instanceof HTMLImageElement) {
         const img = currentImages[index];
-        if (imgElement.naturalWidth && imgElement.naturalHeight) {
-          const newStyle = getDynamicImageStyle(img, imgElement);
-          imgElement.style.cssText = newStyle;
-        }
+        const newStyle = getDynamicImageStyle(img);
+        imgElement.style.cssText = newStyle;
       }
     });
   }
