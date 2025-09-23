@@ -313,8 +313,9 @@
       const style = `
         width: ${cell.width}px;
         height: ${cell.height}px;
-        transform: translate(calc(-50% + ${posX}px), calc(-50% + ${posY}px)) 
-                   rotate(${rotation}deg) 
+        object-fit: contain;
+        transform: translate(calc(-50% + ${posX}px), calc(-50% + ${posY}px))
+                   rotate(${rotation}deg)
                    scale(${scaleRatio});
       `.trim();
       return style;
