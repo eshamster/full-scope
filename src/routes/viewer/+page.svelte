@@ -639,6 +639,11 @@
     document.addEventListener('contextmenu', event => {
       event.preventDefault();
     });
+    // Alt+Tab等でフォーカスを失うとkeyupイベントを取りこぼし
+    // 修飾キー状態が残るため、フォーカス喪失時にリセットする
+    window.addEventListener('blur', () => {
+      controller.resetModifierKeys();
+    });
   });
 
   onDestroy(() => {
