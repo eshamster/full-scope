@@ -105,14 +105,41 @@
     margin: 0.1em 0;
     line-height: 1.2;
   }
+
+  .drag-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    pointer-events: none;
+  }
+
+  .drag-message {
+    color: white;
+    font-size: 2rem;
+    font-weight: bold;
+    text-align: center;
+    padding: 2rem;
+    border: 3px dashed white;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 </style>
 
 <script lang="ts">
   import { convertFileSrc } from '@tauri-apps/api/core';
-  import { getPrevImagePaths } from '@/lib/api/files';
+  import { getPrevImagePaths, dropPaths } from '@/lib/api/files';
   import { listen } from '@tauri-apps/api/event';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { invoke } from '@tauri-apps/api/core';
+  import type { Event as TauriEvent } from '@tauri-apps/api/event';
+  import type { DragDropEvent } from '@tauri-apps/api/webview';
   import { onMount, onDestroy } from 'svelte';
   import { ImageInfo } from '@/routes/viewer/image-info.svelte';
   import { ImageInfoManager } from '@/routes/viewer/image-info-manager.svelte';
@@ -170,6 +197,10 @@
   let isDragging = $state(false);
   let dragStartX = $state(0);
   let dragStartY = $state(0);
+
+  // ドラッグ&ドロップ状態管理
+  let isDragOver = $state(false);
+  let dragDropUnlisten: (() => void) | undefined;
 
   // タグ編集を開始する関数
   async function startTagEdit() {
@@ -368,11 +399,71 @@
   }
 
   // コアプロセスから画像のパスを受け取ったときの処理
-  function handleImagePaths(resp: ImagePathsResp) {
+  async function handleImagePaths(resp: ImagePathsResp) {
     const images = resp.paths.map(path => {
       return new ImageInfo(path);
     });
-    manager.addImages(images);
+    const beforeCount = manager.getListLength();
+    await manager.addImages(images);
+    const afterCount = manager.getListLength();
+    const addedCount = afterCount - beforeCount;
+
+    // ドラッグ&ドロップからの追加の場合は通知を表示
+    if (addedCount > 0 && isDragOver) {
+      toastController.showToast(`${addedCount}個の画像を追加しました`);
+    }
+  }
+
+  // 状態チェック用のderived
+  let isAnyDialogOpen = $derived(
+    dialogController.isShow() ||
+      gotoDialogController.isShow() ||
+      filterDialogController.isShow() ||
+      showTagEditor
+  );
+
+  // ドラッグ&ドロップハンドラー
+  async function handleViewerDrop(event: TauriEvent<DragDropEvent>) {
+    console.log('Viewer drop event:', event.payload);
+
+    // 状態チェック - 無効化条件
+    if (editModeController.isInEditMode()) {
+      console.log('Drop ignored: edit mode active');
+      return;
+    }
+
+    if (isAnyDialogOpen) {
+      console.log('Drop ignored: dialog active');
+      return;
+    }
+
+    // ドロップ処理実行
+    if (event.payload.type === 'drop') {
+      isDragOver = false;
+      const inputPaths = event.payload.paths;
+
+      try {
+        await dropPaths(inputPaths);
+        // 成功時の処理は new-images イベントで自動的に実行される
+      } catch (error) {
+        console.error('Drop failed:', error);
+        toastController.showToast('ファイルの読み込みに失敗しました');
+      }
+    }
+  }
+
+  // ドラッグオーバーハンドラー
+  function handleViewerDragOver(event: TauriEvent<DragDropEvent>) {
+    // 無効化条件をチェック
+    if (editModeController.isInEditMode() || isAnyDialogOpen) {
+      return;
+    }
+
+    if (event.payload.type === 'over' || event.payload.type === 'enter') {
+      isDragOver = true;
+    } else if (event.payload.type === 'leave') {
+      isDragOver = false;
+    }
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -499,14 +590,30 @@
 
   let unlisten: (() => void) | undefined;
   onMount(async () => {
-    unlisten = await listen<ImagePathsResp>('new-images', event => {
-      handleImagePaths(event.payload);
+    unlisten = await listen<ImagePathsResp>('new-images', async event => {
+      await handleImagePaths(event.payload);
+    });
+
+    // 新規: ドラッグ&ドロップリスナー
+    dragDropUnlisten = await getCurrentWindow().onDragDropEvent(async event => {
+      // ドラッグオーバー処理
+      if (
+        event.payload.type === 'over' ||
+        event.payload.type === 'enter' ||
+        event.payload.type === 'leave'
+      ) {
+        handleViewerDragOver(event);
+      }
+      // ドロップ処理
+      else if (event.payload.type === 'drop') {
+        handleViewerDrop(event);
+      }
     });
 
     // 初回はlistenが間に合わないので、明示的にリクエストを送る
     // ※万が一重複した場合は ImageInfoManager 側で排除
     const resp = await getPrevImagePaths();
-    handleImagePaths(resp);
+    await handleImagePaths(resp);
 
     document.addEventListener('keydown', event => {
       handleKeydown(event);
@@ -540,10 +647,21 @@
     } else {
       console.log(`skipped unlisten: ${unlisten}`);
     }
+
+    // 新規: ドラッグ&ドロップリスナーのクリーンアップ
+    if (dragDropUnlisten && typeof dragDropUnlisten === 'function') {
+      dragDropUnlisten();
+    }
   });
 </script>
 
 <main class="container">
+  {#if isDragOver && !editModeController.isInEditMode() && !isAnyDialogOpen}
+    <div class="drag-overlay">
+      <div class="drag-message">ここにファイルをドロップしてください</div>
+    </div>
+  {/if}
+
   {#if manager.getListLength() > 0}
     <div id="page">
       {manager.getCaret() + 1} / {manager.getListLength()}
