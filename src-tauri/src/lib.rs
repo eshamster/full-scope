@@ -62,33 +62,49 @@ async fn drop(app: tauri::AppHandle, paths: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
+// 対応する画像ファイルの拡張子
+const IMAGE_EXTS: [&str; 5] = ["png", "jpeg", "jpg", "gif", "webp"];
+
+// パスの拡張子が画像ファイルのものかを判定する関数
+// NOTE: 文字列の後方一致ではなく拡張子として比較する。
+// 後方一致だと "photos/jpeg" のような拡張子と同名(あるいは拡張子で終わる名前)の
+// フォルダを画像ファイルと誤判定してしまうため
+fn has_image_extension(path: &Path) -> bool {
+    match path.extension().and_then(|ext| ext.to_str()) {
+        Some(ext) => {
+            let ext_lower = ext.to_lowercase();
+            IMAGE_EXTS.iter().any(|image_ext| *image_ext == ext_lower)
+        }
+        None => false,
+    }
+}
+
 // パス文字列の配列を受け取って拡張子名から画像ファイルを抽出して返す関数
 // ただし、フォルダの場合は一階層だけ中身を見て画像ファイルを抽出する
 fn extract_image_files(paths: Vec<String>) -> Vec<String> {
     let mut image_files = Vec::new();
-    let image_exts = ["png", "jpeg", "jpg", "gif", "webp"];
-
-    let is_image = |path: &str| -> bool {
-        let path_lower = path.to_lowercase();
-        image_exts.iter().any(|ext| path_lower.ends_with(ext))
-    };
 
     for path in paths {
-        if is_image(&path) {
-            image_files.push(path);
-        } else {
-            let dir = std::fs::read_dir(path);
-            if dir.is_err() {
-                // ディレクトリでなければスキップ
-                continue;
-            }
-            for entry in dir.unwrap() {
-                let entry = entry.unwrap();
-                let path = entry.path();
-                if path.is_file() && is_image(path.to_str().unwrap()) {
-                    image_files.push(path.to_str().unwrap().to_string());
+        let path_obj = Path::new(&path);
+
+        // フォルダか否かの判定を拡張子の判定より先に行う
+        // (拡張子と同名のフォルダをファイルとして扱わないため)
+        if path_obj.is_dir() {
+            let dir = match std::fs::read_dir(path_obj) {
+                Ok(dir) => dir,
+                Err(_) => continue,
+            };
+            for entry in dir.flatten() {
+                let entry_path = entry.path();
+                if !entry_path.is_file() || !has_image_extension(&entry_path) {
+                    continue;
+                }
+                if let Some(entry_path_str) = entry_path.to_str() {
+                    image_files.push(entry_path_str.to_string());
                 }
             }
+        } else if has_image_extension(path_obj) {
+            image_files.push(path);
         }
     }
     image_files
@@ -333,15 +349,7 @@ fn validate_and_parse_image_path(img_path: &str) -> Result<(String, String), Str
     }
 
     // 画像ファイル拡張子の検証
-    let image_exts = ["png", "jpeg", "jpg", "gif", "webp"];
-    let path_str = canonical_path
-        .to_str()
-        .ok_or_else(|| "Failed to convert path to string".to_string())?;
-
-    if !image_exts
-        .iter()
-        .any(|ext| path_str.to_lowercase().ends_with(ext))
-    {
+    if !has_image_extension(&canonical_path) {
         return Err("File is not a supported image format".to_string());
     }
 
@@ -507,8 +515,6 @@ mod tests {
 
     #[test]
     fn test_extract_image_files_case_sensitivity() {
-        // TODO: 大文字拡張子のサポートを実装後、このテストを更新
-        // 大文字拡張子をサポートしているため、期待値は3
         let paths = vec![
             "test.JPG".to_string(),
             "test.PNG".to_string(),
@@ -542,21 +548,56 @@ mod tests {
     }
 
     #[test]
-    fn test_is_image_helper_function() {
-        let is_image = |path: &str| -> bool {
-            let image_exts = ["png", "jpeg", "jpg", "gif", "webp"];
-            image_exts.iter().any(|ext| path.ends_with(ext))
-        };
+    fn test_has_image_extension() {
+        assert!(has_image_extension(Path::new("test.jpg")));
+        assert!(has_image_extension(Path::new("test.png")));
+        assert!(has_image_extension(Path::new("test.gif")));
+        assert!(has_image_extension(Path::new("test.webp")));
+        assert!(has_image_extension(Path::new("test.jpeg")));
+        // 大文字拡張子もサポート
+        assert!(has_image_extension(Path::new("test.JPG")));
+        assert!(!has_image_extension(Path::new("test.txt")));
+        assert!(!has_image_extension(Path::new("test")));
+        // 拡張子ではなく名前の一部が拡張子と一致するだけのパスは画像とみなさない
+        assert!(!has_image_extension(Path::new("jpeg")));
+        assert!(!has_image_extension(Path::new("images/jpeg")));
+        assert!(!has_image_extension(Path::new("my_png")));
+    }
 
-        assert!(is_image("test.jpg"));
-        assert!(is_image("test.png"));
-        assert!(is_image("test.gif"));
-        assert!(is_image("test.webp"));
-        assert!(is_image("test.jpeg"));
-        assert!(!is_image("test.txt"));
-        assert!(!is_image("test"));
-        // TODO: 大文字拡張子サポート後はtrueになる予定
-        assert!(!is_image("test.JPG"));
+    #[test]
+    fn test_extract_image_files_with_extension_like_directory_name() {
+        // 拡張子と同名のフォルダ (例: "jpeg") がファイルとして扱われないことを確認する
+        let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+        let dir_names = ["jpeg", "png", "photo.jpg"];
+
+        for dir_name in dir_names.iter() {
+            let sub_dir = temp_dir.path().join(dir_name);
+            std::fs::create_dir(&sub_dir).expect("failed to create sub dir");
+            std::fs::write(sub_dir.join("image.png"), "dummy").expect("failed to create file");
+            std::fs::write(sub_dir.join("memo.txt"), "dummy").expect("failed to create file");
+
+            let result = extract_image_files(vec![sub_dir.to_str().unwrap().to_string()]);
+
+            // フォルダ自身ではなく、フォルダ内の画像ファイルが返る
+            assert_eq!(
+                result.len(),
+                1,
+                "unexpected result for {dir_name}: {result:?}"
+            );
+            assert_eq!(result[0], sub_dir.join("image.png").to_str().unwrap());
+        }
+    }
+
+    #[test]
+    fn test_extract_image_files_with_extension_like_file_name() {
+        // 拡張子を持たないファイル (例: "jpeg") が画像として扱われないことを確認する
+        let temp_dir = tempfile::tempdir().expect("failed to create temp dir");
+        let file_path = temp_dir.path().join("jpeg");
+        std::fs::write(&file_path, "dummy").expect("failed to create file");
+
+        let result = extract_image_files(vec![file_path.to_str().unwrap().to_string()]);
+
+        assert_eq!(result.len(), 0);
     }
 
     // タグ機能のテスト
