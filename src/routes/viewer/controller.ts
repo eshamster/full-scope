@@ -38,6 +38,9 @@ export type Operation =
 
 export type Mode = 'View' | 'Edit';
 
+// 1枚表示時のジャンプ移動量。複数枚表示時は表示枚数分だけ移動する
+const SINGLE_VIEW_JUMP_STEP = 10;
+
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
 type keyConfig = {
@@ -166,6 +169,12 @@ export class Controler {
     }
   }
 
+  // ジャンプの移動量: 1枚表示なら設定値、複数枚表示なら表示枚数分
+  private getJumpStep(): number {
+    const cells = this.viewerController.getCells();
+    return cells > 1 ? cells : SINGLE_VIEW_JUMP_STEP;
+  }
+
   private operate(operation: Operation): void {
     if (
       this.dialogController.isShow() ||
@@ -187,10 +196,10 @@ export class Controler {
         this.imageInfoManager.gotoPrev();
         break;
       case 'nextJump':
-        this.imageInfoManager.gotoNext(10);
+        this.imageInfoManager.gotoNext(this.getJumpStep());
         break;
       case 'prevJump':
-        this.imageInfoManager.gotoPrev(10);
+        this.imageInfoManager.gotoPrev(this.getJumpStep());
         break;
       case 'randomJump':
         this.imageInfoManager.gotoRandom();
