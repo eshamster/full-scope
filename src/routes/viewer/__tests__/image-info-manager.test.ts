@@ -384,9 +384,9 @@ describe('ImageInfoManager', () => {
       });
     });
 
-    describe('applyTagFilter', () => {
+    describe('applyFilter', () => {
       it('should filter images by single tag', async () => {
-        await manager.applyTagFilter(['nature']);
+        await manager.applyFilter(['nature']);
 
         expect(manager.getListLength()).toBe(2);
         expect(manager.getList()[0].path).toBe('/path/to/image1.jpg');
@@ -394,26 +394,39 @@ describe('ImageInfoManager', () => {
       });
 
       it('should filter images by multiple tags (OR condition)', async () => {
-        await manager.applyTagFilter(['portrait', 'landscape']);
+        await manager.applyFilter(['portrait', 'landscape']);
 
         expect(manager.getListLength()).toBe(2);
         expect(manager.getList()[0].path).toBe('/path/to/image1.jpg');
         expect(manager.getList()[1].path).toBe('/path/to/image2.png');
       });
 
-      it('should return all images when tag not found', async () => {
-        await manager.applyTagFilter(['nonexistent']);
+      it('should not apply filter when tag not found', async () => {
+        const applied = await manager.applyFilter(['nonexistent']);
 
-        expect(manager.getListLength()).toBe(0);
+        expect(applied).toBe(false);
+        expect(manager.getListLength()).toBe(3);
+      });
+
+      it('should keep previous filtered list when no image matches', async () => {
+        await manager.applyFilter(['nature']);
+        manager.gotoNext();
+        expect(manager.getCaret()).toBe(1);
+
+        const applied = await manager.applyFilter(['nonexistent']);
+
+        expect(applied).toBe(false);
+        expect(manager.getListLength()).toBe(2);
+        expect(manager.getCaret()).toBe(1);
       });
 
       it('should clear filter when empty tags array provided', async () => {
         // まずフィルタを適用
-        await manager.applyTagFilter(['nature']);
+        await manager.applyFilter(['nature']);
         expect(manager.getListLength()).toBe(2);
 
         // 空の配列でフィルタをクリア
-        await manager.applyTagFilter([]);
+        await manager.applyFilter([]);
         expect(manager.getListLength()).toBe(3);
       });
 
@@ -421,7 +434,7 @@ describe('ImageInfoManager', () => {
         manager.gotoAt(3); // Move to last image
         expect(manager.getCaret()).toBe(2);
 
-        await manager.applyTagFilter(['nature']);
+        await manager.applyFilter(['nature']);
         expect(manager.getCaret()).toBe(0);
       });
 
@@ -429,16 +442,105 @@ describe('ImageInfoManager', () => {
         const managerWithoutTags = new ImageInfoManager();
         await managerWithoutTags.addImages(testImages);
 
-        await expect(managerWithoutTags.applyTagFilter(['nature'])).rejects.toThrow(
+        await expect(managerWithoutTags.applyFilter(['nature'])).rejects.toThrow(
           'TagController not set'
         );
+      });
+    });
+
+    describe('bookmark filter', () => {
+      // image1 と image2 をブックマークする
+      beforeEach(() => {
+        manager.bookmarkCurrent();
+        manager.gotoNext();
+        manager.bookmarkCurrent();
+        manager.gotoAt(1);
+      });
+
+      it('should filter only bookmarked images', async () => {
+        const applied = await manager.applyFilter([], true);
+
+        expect(applied).toBe(true);
+        expect(manager.getList().map(img => img.path)).toEqual([
+          '/path/to/image1.jpg',
+          '/path/to/image2.png',
+        ]);
+      });
+
+      it('should combine bookmark and tags with AND condition', async () => {
+        await manager.applyFilter(['nature'], true);
+
+        expect(manager.getList().map(img => img.path)).toEqual(['/path/to/image1.jpg']);
+      });
+
+      it('should work without TagController when no tag is specified', async () => {
+        const managerWithoutTags = new ImageInfoManager();
+        await managerWithoutTags.addImages(testImages);
+
+        const applied = await managerWithoutTags.applyFilter([], true);
+
+        expect(applied).toBe(true);
+        expect(managerWithoutTags.getListLength()).toBe(2);
+      });
+
+      it('should not apply filter when AND condition matches nothing', async () => {
+        const applied = await manager.applyFilter(['animals'], true);
+
+        expect(applied).toBe(false);
+        expect(manager.getListLength()).toBe(3);
+      });
+
+      it('should not apply filter when no image is bookmarked', async () => {
+        manager.bookmarkCurrent();
+        manager.gotoNext();
+        manager.bookmarkCurrent();
+
+        const applied = await manager.applyFilter([], true);
+
+        expect(applied).toBe(false);
+        expect(manager.getListLength()).toBe(3);
+      });
+
+      it('should keep unbookmarked image in list until filter is re-applied', async () => {
+        await manager.applyFilter([], true);
+        manager.bookmarkCurrent(); // image1 のブックマークを解除
+
+        expect(manager.getListLength()).toBe(2);
+
+        await manager.applyFilter([], true);
+        expect(manager.getList().map(img => img.path)).toEqual(['/path/to/image2.png']);
+      });
+
+      it('should clear filter when re-applied filter matches nothing', async () => {
+        await manager.applyFilter([], true);
+        // 両方のブックマークを解除してから画像追加で再適用させる
+        manager.bookmarkCurrent();
+        manager.gotoNext();
+        manager.bookmarkCurrent();
+
+        await manager.addImages([new ImageInfo('/path/to/image4.jpg')]);
+        await vi.waitFor(() => expect(manager.getListLength()).toBe(4));
+      });
+    });
+
+    describe('hasBookmarkedImage', () => {
+      it('should return false when no image is bookmarked', () => {
+        expect(manager.hasBookmarkedImage()).toBe(false);
+      });
+
+      it('should check bookmarks outside of filtered list', async () => {
+        manager.gotoAt(2);
+        manager.bookmarkCurrent(); // image2 ('nature' を持たない)
+        await manager.applyFilter(['nature']);
+
+        expect(manager.hasBookmarkedImage()).toBe(true);
       });
     });
 
     describe('clearFilter', () => {
       it('should restore original list', async () => {
         // フィルタを適用
-        await manager.applyTagFilter(['nature']);
+        await manager.applyFilter(['nature']);
         expect(manager.getListLength()).toBe(2);
 
         // フィルタをクリア
@@ -457,7 +559,7 @@ describe('ImageInfoManager', () => {
 
     describe('integration with existing functionality', () => {
       it('should maintain filter after adding new images', async () => {
-        await manager.applyTagFilter(['nature']);
+        await manager.applyFilter(['nature']);
         expect(manager.getListLength()).toBe(2);
 
         // loadTagsInDirの呼び出し回数をリセット
@@ -470,7 +572,7 @@ describe('ImageInfoManager', () => {
         // NOTE: 本来であれば新しい画像のタグ情報を更新してフィルタ結果の変化を確認したいが、
         // mockTagControllerの設定を動的に変更してもgetImageTagsMapは既存のモック設定を使用するため、
         // 結果の数値変化での確認は困難。代わりにloadTagsInDirが再度呼ばれることで
-        // updateDisplayList→applyTagFilterの再実行を確認する。
+        // updateDisplayList→applyFilterの再実行を確認する。
         expect(mockTagController.loadTagsInDir).toHaveBeenCalled();
 
         // フィルタ状態は維持される
@@ -478,7 +580,7 @@ describe('ImageInfoManager', () => {
       });
 
       it('should update filtered list after deleting current image', async () => {
-        await manager.applyTagFilter(['nature']);
+        await manager.applyFilter(['nature']);
         expect(manager.getListLength()).toBe(2);
 
         // loadTagsInDirの呼び出し回数をリセット
@@ -501,7 +603,7 @@ describe('ImageInfoManager', () => {
 
       it('should count bookmarks only in filtered list', async () => {
         // フィルタを適用
-        await manager.applyTagFilter(['nature']);
+        await manager.applyFilter(['nature']);
         expect(manager.getListLength()).toBe(2);
 
         // フィルタされたリストの画像をブックマーク
@@ -514,7 +616,7 @@ describe('ImageInfoManager', () => {
       });
 
       it('should navigate only within filtered results', async () => {
-        await manager.applyTagFilter(['nature']);
+        await manager.applyFilter(['nature']);
         expect(manager.getListLength()).toBe(2);
         expect(manager.getCaret()).toBe(0);
 

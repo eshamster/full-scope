@@ -18,6 +18,7 @@ export class ImageInfoManager {
   private history: ImageShowHistory = new ImageShowHistory();
   private showImageInfo: boolean = $state(false);
   private activeFilterTags = new SvelteSet<string>();
+  private activeBookmarkedOnly: boolean = false;
   private isFiltered: boolean = $state(false);
   private tagController: TagController | null = null;
   private globalRotation: number = $state(0); // グローバル回転角度
@@ -193,12 +194,48 @@ export class ImageInfoManager {
     return this.showImageInfo;
   }
 
-  // --- タグフィルタ関連 --- //
+  // --- フィルタ関連 --- //
 
-  public async applyTagFilter(tags: string[]): Promise<void> {
-    if (tags.length === 0) {
+  // 条件に合う画像が 0 件の場合は適用せず（表示リストを維持して）false を返す
+  public async applyFilter(tags: string[], bookmarkedOnly: boolean = false): Promise<boolean> {
+    if (tags.length === 0 && !bookmarkedOnly) {
       this.clearFilter();
-      return;
+      return true;
+    }
+
+    const filtered = await this.computeFilteredList(tags, bookmarkedOnly);
+    if (filtered.length === 0) {
+      return false;
+    }
+
+    this.filteredList = filtered;
+    this.activeFilterTags.clear();
+    tags.forEach(tag => this.activeFilterTags.add(tag));
+    this.activeBookmarkedOnly = bookmarkedOnly;
+    this.isFiltered = true;
+    this.setCaret(0);
+    return true;
+  }
+
+  public clearFilter(): void {
+    this.filteredList = [...this.originalList];
+    this.activeFilterTags.clear();
+    this.activeBookmarkedOnly = false;
+    this.isFiltered = false;
+    this.setCaret(0);
+  }
+
+  public hasBookmarkedImage(): boolean {
+    return this.originalList.some(image => image.isBookmarked());
+  }
+
+  // ブックマーク AND タグ (タグ同士は OR) で絞り込む
+  private async computeFilteredList(tags: string[], bookmarkedOnly: boolean): Promise<ImageInfo[]> {
+    const candidates = bookmarkedOnly
+      ? this.originalList.filter(img => img.isBookmarked())
+      : this.originalList;
+    if (tags.length === 0) {
+      return candidates;
     }
 
     if (!this.tagController) {
@@ -208,23 +245,10 @@ export class ImageInfoManager {
     // タグ情報を効率的に取得（ディレクトリ単位でキャッシュ活用）
     const imageTagsMap = await this.getImageTagsMap();
 
-    // OR条件で絞り込み
-    this.filteredList = this.originalList.filter(img => {
+    return candidates.filter(img => {
       const imageTags = imageTagsMap.get(img.path) || [];
       return tags.some(filterTag => imageTags.includes(filterTag));
     });
-
-    this.activeFilterTags.clear();
-    tags.forEach(tag => this.activeFilterTags.add(tag));
-    this.isFiltered = true;
-    this.setCaret(0);
-  }
-
-  public clearFilter(): void {
-    this.filteredList = [...this.originalList];
-    this.activeFilterTags.clear();
-    this.isFiltered = false;
-    this.setCaret(0);
   }
 
   public async getAvailableTags(): Promise<string[]> {
@@ -246,8 +270,13 @@ export class ImageInfoManager {
   private updateDisplayList(): void {
     if (this.isFiltered) {
       // フィルタが有効な場合は再適用
+      // 画像の削除等で 0 件になった場合は、空の表示を避けるためフィルタを解除する
       const activeTagsArray = Array.from(this.activeFilterTags);
-      this.applyTagFilter(activeTagsArray);
+      this.applyFilter(activeTagsArray, this.activeBookmarkedOnly).then(applied => {
+        if (!applied) {
+          this.clearFilter();
+        }
+      });
     } else {
       // フィルタが無効な場合はそのままコピー
       this.filteredList = [...this.originalList];
