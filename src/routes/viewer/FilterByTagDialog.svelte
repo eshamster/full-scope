@@ -11,6 +11,19 @@
     margin-bottom: 20px;
     max-height: 300px;
   }
+
+  .bookmark-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 20px;
+    cursor: pointer;
+  }
+
+  .bookmark-filter.disabled {
+    color: #999;
+    cursor: not-allowed;
+  }
 </style>
 
 <script lang="ts">
@@ -45,8 +58,16 @@
     }
   };
 
+  function isToggleBookmarkKey(e: KeyboardEvent): boolean {
+    return e.ctrlKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === 'b';
+  }
+
   function handleKeydown(e: KeyboardEvent): void {
-    if (e.key === 'Enter') {
+    if (isToggleBookmarkKey(e)) {
+      e.preventDefault();
+      e.stopPropagation();
+      controller.toggleBookmarkedOnly();
+    } else if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
       handleSubmit();
@@ -86,7 +107,16 @@
   <div class="modal-overlay">
     <div class="filter-dialog modal-dialog">
       <div class="modal-content">
-        <div class="modal-title">タグで絞り込み</div>
+        <div class="modal-title">絞り込み</div>
+        <label class="bookmark-filter" class:disabled={!controller.isBookmarkFilterAvailable()}>
+          <input
+            type="checkbox"
+            checked={controller.isBookmarkedOnly()}
+            disabled={!controller.isBookmarkFilterAvailable()}
+            onchange={() => controller.toggleBookmarkedOnly()}
+          />
+          ブックマークのみ (Ctrl+B)
+        </label>
         <TagSelector
           availableTags={cachedAvailableTags}
           selectedTags={controller.getSelectedTags()}

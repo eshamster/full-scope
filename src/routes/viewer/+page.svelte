@@ -169,9 +169,9 @@
   let manager = $state<ImageInfoManager>(new ImageInfoManager());
   const dialogController = new DialogController();
   const gotoDialogController = new GotoDialogController();
-  const filterDialogController = new FilterDialogController(manager);
   const fileController = new FileController();
   const toastController = new ToastController();
+  const filterDialogController = new FilterDialogController(manager, toastController);
   const viewerController = new ViewerController();
   const tagController = new TagController(toastController);
   const editModeController = new EditModeController();

@@ -15,11 +15,11 @@ describe('FilterDialogController', () => {
     tagController = new TagController(toastController);
     imageInfoManager = new ImageInfoManager();
     imageInfoManager.setTagController(tagController);
-    controller = new FilterDialogController(imageInfoManager);
+    controller = new FilterDialogController(imageInfoManager, toastController);
 
     // ImageInfoManagerのメソッドをモック
     vi.spyOn(imageInfoManager, 'getAvailableTags').mockResolvedValue(['tag1', 'tag2', 'tag3']);
-    vi.spyOn(imageInfoManager, 'applyTagFilter').mockResolvedValue();
+    vi.spyOn(imageInfoManager, 'applyFilter').mockResolvedValue(true);
   });
 
   describe('初期状態', () => {
@@ -108,14 +108,14 @@ describe('FilterDialogController', () => {
 
       await controller.executeFilter();
 
-      expect(imageInfoManager.applyTagFilter).toHaveBeenCalledWith(['tag1', 'tag2']);
+      expect(imageInfoManager.applyFilter).toHaveBeenCalledWith(['tag1', 'tag2'], false);
       expect(controller.isShow()).toBe(false);
     });
 
     it('should apply filter with empty array when no tags selected', async () => {
       await controller.executeFilter();
 
-      expect(imageInfoManager.applyTagFilter).toHaveBeenCalledWith([]);
+      expect(imageInfoManager.applyFilter).toHaveBeenCalledWith([], false);
       expect(controller.isShow()).toBe(false);
     });
 
@@ -124,6 +124,74 @@ describe('FilterDialogController', () => {
       await controller.executeFilter();
 
       expect(controller.isShow()).toBe(false);
+    });
+  });
+
+  describe('bookmark filter', () => {
+    it('should disable bookmark filter when no image is bookmarked', async () => {
+      vi.spyOn(imageInfoManager, 'hasBookmarkedImage').mockReturnValue(false);
+      await controller.showDialog();
+
+      expect(controller.isBookmarkFilterAvailable()).toBe(false);
+
+      // disabled の間はトグルできない
+      controller.toggleBookmarkedOnly();
+      expect(controller.isBookmarkedOnly()).toBe(false);
+    });
+
+    it('should toggle bookmarkedOnly when bookmarked image exists', async () => {
+      vi.spyOn(imageInfoManager, 'hasBookmarkedImage').mockReturnValue(true);
+      await controller.showDialog();
+
+      expect(controller.isBookmarkFilterAvailable()).toBe(true);
+      controller.toggleBookmarkedOnly();
+      expect(controller.isBookmarkedOnly()).toBe(true);
+      controller.toggleBookmarkedOnly();
+      expect(controller.isBookmarkedOnly()).toBe(false);
+    });
+
+    it('should reset bookmarkedOnly when showing dialog', async () => {
+      vi.spyOn(imageInfoManager, 'hasBookmarkedImage').mockReturnValue(true);
+      await controller.showDialog();
+      controller.toggleBookmarkedOnly();
+
+      controller.hideDialog();
+      await controller.showDialog();
+
+      expect(controller.isBookmarkedOnly()).toBe(false);
+    });
+
+    it('should apply filter with bookmarkedOnly and selected tags', async () => {
+      vi.spyOn(imageInfoManager, 'hasBookmarkedImage').mockReturnValue(true);
+      await controller.showDialog();
+      controller.toggleBookmarkedOnly();
+      controller.toggleTag('tag1');
+
+      await controller.executeFilter();
+
+      expect(imageInfoManager.applyFilter).toHaveBeenCalledWith(['tag1'], true);
+      expect(controller.isShow()).toBe(false);
+    });
+
+    it('should show toast when no image matches', async () => {
+      vi.mocked(imageInfoManager.applyFilter).mockResolvedValue(false);
+      const showToastSpy = vi.spyOn(toastController, 'showToast');
+      await controller.showDialog();
+      controller.toggleTag('tag1');
+
+      await controller.executeFilter();
+
+      expect(showToastSpy).toHaveBeenCalledWith('該当する画像がありません');
+    });
+
+    it('should not show toast when filter is applied', async () => {
+      const showToastSpy = vi.spyOn(toastController, 'showToast');
+      await controller.showDialog();
+      controller.toggleTag('tag1');
+
+      await controller.executeFilter();
+
+      expect(showToastSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -137,10 +205,10 @@ describe('FilterDialogController', () => {
       expect(controller.isShow()).toBe(true);
     });
 
-    it('should handle applyTagFilter error gracefully', async () => {
+    it('should handle applyFilter error gracefully', async () => {
       await controller.showDialog();
       controller.toggleTag('tag1');
-      vi.mocked(imageInfoManager.applyTagFilter).mockRejectedValue(new Error('Filter Error'));
+      vi.mocked(imageInfoManager.applyFilter).mockRejectedValue(new Error('Filter Error'));
 
       await expect(controller.executeFilter()).rejects.toThrow('Filter Error');
       // エラーが発生してもダイアログは閉じられる（hideDialogが先に実行される）

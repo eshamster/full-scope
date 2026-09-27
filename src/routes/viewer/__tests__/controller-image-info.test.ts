@@ -24,9 +24,9 @@ describe('Controller - Image Info Display', () => {
     imageInfoManager = new ImageInfoManager();
     dialogController = new DialogController();
     gotoDialogController = new GotoDialogController();
-    filterDialogController = new FilterDialogController(imageInfoManager);
-    fileController = new FileController();
     toastController = new ToastController();
+    filterDialogController = new FilterDialogController(imageInfoManager, toastController);
+    fileController = new FileController();
     viewerController = new ViewerController();
     editModeController = new EditModeController();
 

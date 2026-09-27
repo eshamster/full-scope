@@ -220,6 +220,22 @@ describe('TagSelector', () => {
       expect(mockOnHeadCharMatch).not.toHaveBeenCalled();
     });
 
+    it('should not handle characters with modifier keys', async () => {
+      render(TagSelector, {
+        props: {
+          ...defaultProps,
+          enableKeyboardInput: true,
+          onHeadCharMatch: mockOnHeadCharMatch,
+        },
+      });
+
+      await fireEvent.keyDown(document, { key: 'n', ctrlKey: true });
+      await fireEvent.keyDown(document, { key: 'n', altKey: true });
+      await fireEvent.keyDown(document, { key: 'n', metaKey: true });
+
+      expect(mockOnHeadCharMatch).not.toHaveBeenCalled();
+    });
+
     it('should not call onHeadCharMatch when no matching tags found', async () => {
       render(TagSelector, {
         props: {

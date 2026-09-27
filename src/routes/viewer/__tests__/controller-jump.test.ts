@@ -25,7 +25,7 @@ describe('Controller - Jump step', () => {
       new ToastController(),
       viewerController,
       new GotoDialogController(),
-      new FilterDialogController(imageInfoManager),
+      new FilterDialogController(imageInfoManager, new ToastController()),
       new EditModeController()
     );
 

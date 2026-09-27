@@ -93,6 +93,8 @@
   // キーボードイベントハンドラ
   const handleKeydown = (e: KeyboardEvent): void => {
     if (!enableKeyboardInput) return;
+    // 修飾キー付きの入力はショートカット用として頭文字マッチの対象外とする
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
 
     if (/^[a-zA-Z0-9]$/.test(e.key)) {
       e.preventDefault();
