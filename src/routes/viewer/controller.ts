@@ -255,6 +255,7 @@ export class Controler {
         break;
       case 'toggleFlip':
         this.viewerController.toggleFlip();
+        this.viewerController.showCellNumbers();
         this.toastController.showToast(
           `フリップ: ${this.viewerController.isFlipped() ? 'ON' : 'OFF'}`
         );

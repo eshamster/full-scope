@@ -1,5 +1,6 @@
 const MAX_ROWS = 10;
 const MAX_COLS = 10;
+const CELL_NUMBERS_DISPLAY_MS = 500;
 
 export type HorizontalAlign = 'center' | 'left' | 'right';
 
@@ -11,6 +12,9 @@ export class ViewerController {
   private flipped: boolean = $state(false);
   // 奇数列を右寄せ・偶数列を左寄せにして隣り合う画像を隣接させるか
   private adjacent: boolean = $state(false);
+  // フリップ直後に各セルの連番を一時表示するか
+  private cellNumbersVisible: boolean = $state(false);
+  private cellNumbersTimerId: number | null = null;
 
   private setRows(rows: number): void {
     this.rows = Math.max(1, Math.min(rows, MAX_ROWS));
@@ -45,6 +49,24 @@ export class ViewerController {
   }
   public isFlipped(): boolean {
     return this.flipped;
+  }
+
+  // セルの並び順を把握しやすくするため、連番を短時間表示する (1セルのみの場合は並び順の情報にならないため表示しない)
+  public showCellNumbers(): void {
+    if (this.getCells() < 2) {
+      return;
+    }
+    this.cellNumbersVisible = true;
+
+    if (this.cellNumbersTimerId) {
+      window.clearTimeout(this.cellNumbersTimerId);
+    }
+    this.cellNumbersTimerId = window.setTimeout(() => {
+      this.cellNumbersVisible = false;
+    }, CELL_NUMBERS_DISPLAY_MS);
+  }
+  public isCellNumbersVisible(): boolean {
+    return this.cellNumbersVisible;
   }
 
   public toggleAdjacent(): void {

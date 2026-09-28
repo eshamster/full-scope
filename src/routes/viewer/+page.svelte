@@ -43,6 +43,35 @@
   }
   .cell {
     position: relative;
+    container-type: size;
+  }
+
+  /* フリップ直後に表示するセルの連番 */
+  .cell-number {
+    /* 調整用パラメータ */
+    --cell-number-max-size: 256px; /* 文字サイズの上限 */
+    --cell-number-size-ratio: 60cqmin; /* セル短辺に対する文字サイズ */
+    --cell-number-stroke-width: 3px; /* 縁取りの太さ */
+    --cell-number-opacity: 0.7; /* 表示開始時の不透明度 (0〜1) */
+    --cell-number-fade-duration: 0.35s; /* フェードアウトにかける時間 */
+
+    position: absolute;
+    z-index: 1;
+    /* rtl の影響を受けないようにする */
+    direction: ltr;
+    color: white;
+    font-size: min(var(--cell-number-max-size), var(--cell-number-size-ratio));
+    font-weight: bold;
+    -webkit-text-stroke: var(--cell-number-stroke-width) black;
+    paint-order: stroke fill;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--cell-number-fade-duration) ease-out;
+  }
+  .cell-number.visible {
+    opacity: var(--cell-number-opacity);
+    /* 表示は即時、非表示時のみフェードアウトさせる */
+    transition: none;
   }
 
   .cell img {
@@ -719,6 +748,9 @@
             style={getDynamicImageStyle(img, i)}
             onload={event => updateImageSize(event, img, i)}
           />
+          <div class="cell-number" class:visible={viewerController.isCellNumbersVisible()}>
+            {i + 1}
+          </div>
         </div>
       {/each}
     </div>
