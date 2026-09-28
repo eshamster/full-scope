@@ -55,13 +55,13 @@ export class ViewerController {
   }
 
   // セル内での画像の水平方向の寄せ方を返す
-  // 隣接表示時は列番号 (1始まり) の奇数列を右寄せ、偶数列を左寄せにする (フリップ時は逆)
+  // 隣接表示時はグリッド全体の通し番号 (1始まり) の奇数セルを右寄せ、偶数セルを左寄せにする (フリップ時は逆)
   public getHorizontalAlign(cellIndex: number): HorizontalAlign {
     if (!this.adjacent) {
       return 'center';
     }
-    const isOddColumn = (cellIndex % this.cols) % 2 === 0;
-    return isOddColumn !== this.flipped ? 'right' : 'left';
+    const isOddCell = cellIndex % 2 === 0;
+    return isOddCell !== this.flipped ? 'right' : 'left';
   }
 
   public getCells(): number {

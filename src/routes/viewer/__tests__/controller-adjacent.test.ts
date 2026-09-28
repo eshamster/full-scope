@@ -70,17 +70,17 @@ describe('ViewerController - getHorizontalAlign', () => {
     expect(alignsOf(6)).toEqual(['center', 'center', 'center', 'center', 'center', 'center']);
   });
 
-  it('隣接表示時は列番号の奇数列が右寄せ、偶数列が左寄せ', () => {
+  it('隣接表示時は通し番号の奇数セルが右寄せ、偶数セルが左寄せ (奇数列数では行をまたいで交互になる)', () => {
     setup2x3();
     viewerController.toggleAdjacent();
-    expect(alignsOf(6)).toEqual(['right', 'left', 'right', 'right', 'left', 'right']);
+    expect(alignsOf(6)).toEqual(['right', 'left', 'right', 'left', 'right', 'left']);
   });
 
   it('隣接+フリップ時は寄せ方向が逆になる', () => {
     setup2x3();
     viewerController.toggleAdjacent();
     viewerController.toggleFlip();
-    expect(alignsOf(6)).toEqual(['left', 'right', 'left', 'left', 'right', 'left']);
+    expect(alignsOf(6)).toEqual(['left', 'right', 'left', 'right', 'left', 'right']);
   });
 
   it('フリップのみでは中央寄せのまま', () => {
@@ -89,12 +89,12 @@ describe('ViewerController - getHorizontalAlign', () => {
     expect(alignsOf(6)).toEqual(['center', 'center', 'center', 'center', 'center', 'center']);
   });
 
-  it('1列表示でも規則どおり寄せる', () => {
+  it('1列表示では行ごとに交互に寄せる', () => {
     viewerController.incrementRows();
     viewerController.toggleAdjacent();
-    expect(alignsOf(2)).toEqual(['right', 'right']);
+    expect(alignsOf(2)).toEqual(['right', 'left']);
 
     viewerController.toggleFlip();
-    expect(alignsOf(2)).toEqual(['left', 'left']);
+    expect(alignsOf(2)).toEqual(['left', 'right']);
   });
 });
