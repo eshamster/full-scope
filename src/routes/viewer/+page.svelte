@@ -331,7 +331,24 @@
     };
   }
 
-  function getDynamicImageStyle(img: ImageInfo): string {
+  // 隣接表示時に画像をセル境界の外へはみ出させる量
+  // 小数ピクセル位置の画像端はアンチエイリアスで半透明になり隙間に見えるため、
+  // はみ出させた上でセルの overflow: hidden (デバイスピクセル単位で切り抜かれる) で揃える
+  const ADJACENT_OVERFLOW_PX = 1;
+
+  // セル内での画像中心の水平位置 (隣接表示時は回転後の外形幅を基準に端へ寄せる)
+  function getImageLeft(cellIndex: number, effectiveWidth: number): string {
+    switch (viewerController.getHorizontalAlign(cellIndex)) {
+      case 'right':
+        return `calc(100% - ${effectiveWidth / 2 - ADJACENT_OVERFLOW_PX}px)`;
+      case 'left':
+        return `${effectiveWidth / 2 - ADJACENT_OVERFLOW_PX}px`;
+      case 'center':
+        return '50%';
+    }
+  }
+
+  function getDynamicImageStyle(img: ImageInfo, cellIndex: number): string {
     const rotation = manager.getTotalRotation(img);
     const scaleRatio = img.getScaleRatio();
     const posX = img.getPositionX();
@@ -352,7 +369,10 @@
       return style;
     }
 
+    const effectiveWidth =
+      rotation % 180 === 0 ? optimal.actualImageWidth : optimal.actualImageHeight;
     const style = `
+      left: ${getImageLeft(cellIndex, effectiveWidth)};
       width: ${optimal.actualImageWidth}px;
       height: ${optimal.actualImageHeight}px;
       object-fit: fill;
@@ -364,7 +384,7 @@
   }
 
   // 画像ロード後のサイズ更新
-  async function updateImageSize(event: Event, img: ImageInfo) {
+  async function updateImageSize(event: Event, img: ImageInfo, cellIndex: number) {
     const imgElement = event.target as HTMLImageElement;
 
     if (!img.hasImageSize()) {
@@ -381,7 +401,7 @@
     }
 
     // 新しいスタイルを適用
-    const newStyle = getDynamicImageStyle(img);
+    const newStyle = getDynamicImageStyle(img, cellIndex);
     imgElement.style.cssText = newStyle;
   }
 
@@ -392,7 +412,7 @@
     imgElements.forEach((imgElement, index) => {
       if (index < currentImages.length && imgElement instanceof HTMLImageElement) {
         const img = currentImages[index];
-        const newStyle = getDynamicImageStyle(img);
+        const newStyle = getDynamicImageStyle(img, index);
         imgElement.style.cssText = newStyle;
       }
     });
@@ -696,8 +716,8 @@
             id="image"
             src={convertFileSrc(img.path)}
             alt={img.path}
-            style={getDynamicImageStyle(img)}
-            onload={event => updateImageSize(event, img)}
+            style={getDynamicImageStyle(img, i)}
+            onload={event => updateImageSize(event, img, i)}
           />
         </div>
       {/each}

@@ -23,6 +23,7 @@ export type Operation =
   | 'incrementCols'
   | 'decrementCols'
   | 'toggleFlip'
+  | 'toggleAdjacent'
   | 'editTags'
   | 'toggleImageInfo'
   | 'goto'
@@ -77,6 +78,7 @@ const viewModeKeyConfigs: keyConfig[] = [
   { key: 'l', operation: 'incrementCols', modifierKeys: [] },
   { key: 'l', operation: 'decrementCols', modifierKeys: ['shift'] },
   { key: 'f', operation: 'toggleFlip', modifierKeys: [] },
+  { key: 'a', operation: 'toggleAdjacent', modifierKeys: [] },
   { key: 't', operation: 'editTags', modifierKeys: [] },
   { key: 'i', operation: 'toggleImageInfo', modifierKeys: [] },
   { key: 'g', operation: 'goto', modifierKeys: ['ctrl', 'shift'] },
@@ -255,6 +257,12 @@ export class Controler {
         this.viewerController.toggleFlip();
         this.toastController.showToast(
           `フリップ: ${this.viewerController.isFlipped() ? 'ON' : 'OFF'}`
+        );
+        break;
+      case 'toggleAdjacent':
+        this.viewerController.toggleAdjacent();
+        this.toastController.showToast(
+          `隣接表示: ${this.viewerController.isAdjacent() ? 'ON' : 'OFF'}`
         );
         break;
       case 'editTags':
