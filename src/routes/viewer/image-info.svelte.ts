@@ -7,8 +7,9 @@ export class ImageInfo {
   private positionX: number = $state(0);
   private positionY: number = $state(0);
 
-  private width: number = 0;
-  private height: number = 0;
+  // サイズ取得後に表示スタイルを再計算させるためリアクティブにする
+  private width: number = $state(0);
+  private height: number = $state(0);
 
   constructor(public path: string) {}
 
