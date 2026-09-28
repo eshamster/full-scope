@@ -331,13 +331,18 @@
     };
   }
 
+  // 隣接表示時に画像をセル境界の外へはみ出させる量
+  // 小数ピクセル位置の画像端はアンチエイリアスで半透明になり隙間に見えるため、
+  // はみ出させた上でセルの overflow: hidden (デバイスピクセル単位で切り抜かれる) で揃える
+  const ADJACENT_OVERFLOW_PX = 1;
+
   // セル内での画像中心の水平位置 (隣接表示時は回転後の外形幅を基準に端へ寄せる)
   function getImageLeft(cellIndex: number, effectiveWidth: number): string {
     switch (viewerController.getHorizontalAlign(cellIndex)) {
       case 'right':
-        return `calc(100% - ${effectiveWidth / 2}px)`;
+        return `calc(100% - ${effectiveWidth / 2 - ADJACENT_OVERFLOW_PX}px)`;
       case 'left':
-        return `${effectiveWidth / 2}px`;
+        return `${effectiveWidth / 2 - ADJACENT_OVERFLOW_PX}px`;
       case 'center':
         return '50%';
     }
