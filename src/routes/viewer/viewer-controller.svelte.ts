@@ -5,6 +5,8 @@ export class ViewerController {
   // グリッド表示の行列数管理
   private rows: number = $state(1);
   private cols: number = $state(1);
+  // 複数枚表示時の並び順を左右反転するか
+  private flipped: boolean = $state(false);
 
   private setRows(rows: number): void {
     this.rows = Math.max(1, Math.min(rows, MAX_ROWS));
@@ -32,6 +34,13 @@ export class ViewerController {
   }
   public getCols(): number {
     return this.cols;
+  }
+
+  public toggleFlip(): void {
+    this.flipped = !this.flipped;
+  }
+  public isFlipped(): boolean {
+    return this.flipped;
   }
 
   public getCells(): number {

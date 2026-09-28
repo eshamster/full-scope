@@ -687,6 +687,7 @@
       style="
              grid-template-rows: repeat({viewerController.getRows()}, 1fr);
              grid-template-columns: repeat({viewerController.getCols()}, 1fr);
+             direction: {viewerController.isFlipped() ? 'rtl' : 'ltr'};
              "
     >
       {#each currentImages as img, i (i)}

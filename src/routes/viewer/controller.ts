@@ -22,6 +22,7 @@ export type Operation =
   | 'decrementRows'
   | 'incrementCols'
   | 'decrementCols'
+  | 'toggleFlip'
   | 'editTags'
   | 'toggleImageInfo'
   | 'goto'
@@ -75,6 +76,7 @@ const viewModeKeyConfigs: keyConfig[] = [
   { key: 'r', operation: 'decrementRows', modifierKeys: ['shift'] },
   { key: 'l', operation: 'incrementCols', modifierKeys: [] },
   { key: 'l', operation: 'decrementCols', modifierKeys: ['shift'] },
+  { key: 'f', operation: 'toggleFlip', modifierKeys: [] },
   { key: 't', operation: 'editTags', modifierKeys: [] },
   { key: 'i', operation: 'toggleImageInfo', modifierKeys: [] },
   { key: 'g', operation: 'goto', modifierKeys: ['ctrl', 'shift'] },
@@ -248,6 +250,12 @@ export class Controler {
         break;
       case 'decrementCols':
         this.viewerController.decrementCols();
+        break;
+      case 'toggleFlip':
+        this.viewerController.toggleFlip();
+        this.toastController.showToast(
+          `フリップ: ${this.viewerController.isFlipped() ? 'ON' : 'OFF'}`
+        );
         break;
       case 'editTags':
         if (this.onEditTags) {
