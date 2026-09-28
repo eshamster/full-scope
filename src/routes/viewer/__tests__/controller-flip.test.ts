@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Controler } from '../controller';
 import { ImageInfoManager } from '../image-info-manager.svelte';
 import { DialogController } from '../dialog-controller.svelte';
@@ -46,6 +46,42 @@ describe('Controller - Flip', () => {
     controller.operateByKey('f');
     expect(viewerController.isFlipped()).toBe(false);
     expect(toastController.showToast).toHaveBeenLastCalledWith('フリップ: OFF');
+  });
+
+  describe('セル連番の一時表示', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('複数セル時は f キーで連番を表示し、0.5秒後に非表示にする', () => {
+      viewerController.incrementCols();
+      controller.operateByKey('f');
+      expect(viewerController.isCellNumbersVisible()).toBe(true);
+
+      vi.advanceTimersByTime(499);
+      expect(viewerController.isCellNumbersVisible()).toBe(true);
+      vi.advanceTimersByTime(1);
+      expect(viewerController.isCellNumbersVisible()).toBe(false);
+    });
+
+    it('連打時は表示時間を延長する', () => {
+      viewerController.incrementCols();
+      controller.operateByKey('f');
+      vi.advanceTimersByTime(400);
+      controller.operateByKey('f');
+      vi.advanceTimersByTime(400);
+      expect(viewerController.isCellNumbersVisible()).toBe(true);
+      vi.advanceTimersByTime(100);
+      expect(viewerController.isCellNumbersVisible()).toBe(false);
+    });
+
+    it('1セルのみの場合は連番を表示しない', () => {
+      controller.operateByKey('f');
+      expect(viewerController.isCellNumbersVisible()).toBe(false);
+    });
   });
 
   it('Ctrl+Shift+F ではフリップしない', () => {
