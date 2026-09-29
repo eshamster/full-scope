@@ -22,9 +22,18 @@ export class ImageInfoManager {
   private isFiltered: boolean = $state(false);
   private tagController: TagController | null = null;
   private globalRotation: number = $state(0); // グローバル回転角度
+  // ジャンプ系の移動先を組の先頭へ揃える関数 (ズームモード中のみ設定)
+  private caretAligner: ((index: number) => number) | null = null;
 
   public setTagController(tagController: TagController): void {
     this.tagController = tagController;
+  }
+
+  public setCaretAligner(aligner: ((index: number) => number) | null): void {
+    this.caretAligner = aligner;
+  }
+  private align(index: number): number {
+    return this.caretAligner ? this.caretAligner(index) : index;
   }
 
   public async addImages(images: ImageInfo[]): Promise<void> {
@@ -95,16 +104,26 @@ export class ImageInfoManager {
       this.setCaret(this.caret - step);
     }
   }
+  public gotoIndex(index: number): void {
+    this.setCaret(index);
+  }
   public gotoRandom(): void {
     if (this.filteredList.length <= 1) {
       return;
     }
-    // 現在位置を避けつつランダムに移動
-    let next = Math.floor(Math.random() * this.filteredList.length - 1);
-    if (next >= this.caret) {
-      next++;
+    // 現在の組しかない場合は移動先がない
+    if (this.align(0) === this.caret && this.align(this.filteredList.length - 1) === this.caret) {
+      return;
     }
-    this.setCaret(next, true);
+    // 現在位置 (の組) を避けつつランダムに移動
+    let next: number;
+    do {
+      next = Math.floor(Math.random() * (this.filteredList.length - 1));
+      if (next >= this.caret) {
+        next++;
+      }
+    } while (this.align(next) === this.caret);
+    this.setCaret(this.align(next), true);
   }
   public gotoAt(imageNumber: number): void {
     // 1ベースのインデックスを0ベースに変換
@@ -116,8 +135,9 @@ export class ImageInfoManager {
     const start = this.caret;
     for (let i = 1; i <= this.filteredList.length; i++) {
       const index = (start + i) % this.filteredList.length;
-      if (this.filteredList[index].isBookmarked()) {
-        this.setCaret(index);
+      // 現在の組に含まれるブックマークは移動にならないため飛ばす
+      if (this.filteredList[index].isBookmarked() && this.align(index) !== this.caret) {
+        this.setCaret(this.align(index));
         return;
       }
     }
@@ -134,8 +154,13 @@ export class ImageInfoManager {
       next = this.history.gotoNextPath()
     ) {
       const image = this.findImageByPath(next);
-      if (image !== null) {
-        this.setCaret(this.filteredList.indexOf(image));
+      if (image === null) {
+        continue;
+      }
+      // ズームモード中は、現在の組に含まれる画像は移動にならないため飛ばす
+      const index = this.align(this.filteredList.indexOf(image));
+      if (this.caretAligner === null || index !== this.caret) {
+        this.setCaret(index);
         return;
       }
     }
@@ -147,8 +172,13 @@ export class ImageInfoManager {
       prev = this.history.gotoPrevPath()
     ) {
       const image = this.findImageByPath(prev);
-      if (image !== null) {
-        this.setCaret(this.filteredList.indexOf(image));
+      if (image === null) {
+        continue;
+      }
+      // ズームモード中は、現在の組に含まれる画像は移動にならないため飛ばす
+      const index = this.align(this.filteredList.indexOf(image));
+      if (this.caretAligner === null || index !== this.caret) {
+        this.setCaret(index);
         return;
       }
     }

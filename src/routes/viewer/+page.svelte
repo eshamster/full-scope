@@ -189,6 +189,7 @@
   import ImageInfoDisplay from './image-info-display.svelte';
   import HelpOverlay from './HelpOverlay.svelte';
   import { HelpOverlayController } from './help-overlay-controller.svelte';
+  import { ZoomModeController } from './zoom-mode-controller.svelte';
   import { buildHelpSections, getModeLabel } from './help-content';
 
   getCurrentWindow().setFullscreen(true);
@@ -208,6 +209,7 @@
   const tagController = new TagController(toastController);
   const editModeController = new EditModeController();
   const helpOverlayController = new HelpOverlayController();
+  const zoomModeController = new ZoomModeController();
   const controller = new Controler(
     manager,
     dialogController,
@@ -217,7 +219,8 @@
     gotoDialogController,
     filterDialogController,
     editModeController,
-    helpOverlayController
+    helpOverlayController,
+    zoomModeController
   );
 
   // コマンド一覧は現在のモードのキー設定から組み立てる
@@ -277,7 +280,11 @@
       const listLength = manager.getListLength();
 
       if (listLength > 0) {
-        const cellCount = viewerController.getRows() * viewerController.getCols();
+        // ズームモード中は半端な組を半端なまま表示するため、組の終わりまでに制限する
+        const group = zoomModeController.isActive() ? zoomModeController.getGroup() : null;
+        const cellCount = group
+          ? group.countFrom(manager.getCaret(), listLength)
+          : viewerController.getRows() * viewerController.getCols();
         const images = manager.getCurrentList(cellCount);
         return images;
       } else {
@@ -480,13 +487,42 @@
       showTagEditor
   );
 
+  // ズームモード (Pointer Lock) 関連
+
+  // Pointer Lock の Esc による解除でズームモードを抜けた直後に届く Esc で、ウィンドウを閉じないための猶予
+  const ESCAPE_GUARD_MS_AFTER_ZOOM_EXIT = 500;
+  let lastZoomExitAt = -Infinity;
+
+  // 画面端でカーソルが止まらないようにするため Pointer Lock を使う (カーソルも非表示になる)
+  function requestZoomPointerLock() {
+    Promise.resolve(document.body.requestPointerLock()).catch(error => {
+      console.warn('Failed to request pointer lock:', error);
+      controller.exitZoomMode();
+    });
+  }
+
+  function handlePointerLockChange() {
+    // Esc・フォーカス喪失などで Pointer Lock が外れた場合はズームモードも終了する
+    if (document.pointerLockElement === null && zoomModeController.isActive()) {
+      lastZoomExitAt = performance.now();
+      controller.exitZoomMode();
+    }
+  }
+
+  // ズームモードを (中クリック等で) 抜けたら Pointer Lock も解除する
+  $effect(() => {
+    if (!zoomModeController.isActive() && document.pointerLockElement !== null) {
+      document.exitPointerLock();
+    }
+  });
+
   // ドラッグ&ドロップハンドラー
   async function handleViewerDrop(event: TauriEvent<DragDropEvent>) {
     console.log('Viewer drop event:', event.payload);
 
     // 状態チェック - 無効化条件
-    if (editModeController.isInEditMode()) {
-      console.log('Drop ignored: edit mode active');
+    if (editModeController.isInEditMode() || zoomModeController.isActive()) {
+      console.log('Drop ignored: edit or zoom mode active');
       return;
     }
 
@@ -513,7 +549,7 @@
   // ドラッグオーバーハンドラー
   function handleViewerDragOver(event: TauriEvent<DragDropEvent>) {
     // 無効化条件をチェック
-    if (editModeController.isInEditMode() || isAnyDialogOpen) {
+    if (editModeController.isInEditMode() || zoomModeController.isActive() || isAnyDialogOpen) {
       return;
     }
 
@@ -535,9 +571,17 @@
     ); // デバッグログ
 
     if (event.key === 'Escape') {
-      // 編集モード中・コマンド一覧表示中はControllerに処理を委譲、それ以外ではウィンドウを閉じる
-      if (editModeController.isInEditMode() || helpOverlayController.isShow()) {
-        // 編集モード終了・コマンド一覧を閉じる処理はController側で行う
+      // 編集・ズームモード中・コマンド一覧表示中はControllerに処理を委譲、それ以外ではウィンドウを閉じる
+      if (
+        editModeController.isInEditMode() ||
+        zoomModeController.isActive() ||
+        helpOverlayController.isShow()
+      ) {
+        // 各モードの終了・コマンド一覧を閉じる処理はController側で行う
+      } else if (performance.now() - lastZoomExitAt < ESCAPE_GUARD_MS_AFTER_ZOOM_EXIT) {
+        // ズームモード終了のための Esc なので閉じない
+        event.preventDefault();
+        return;
       } else {
         getCurrentWindow().close();
         return; // 以降の処理をスキップ
@@ -591,6 +635,20 @@
       return;
     }
 
+    // ズームモード中はクリックをそのまま操作に割り当てる (左クリックも Shift 扱いにしない)
+    if (zoomModeController.isActive()) {
+      event.preventDefault();
+      const zoomKeys: Record<number, string> = {
+        0: 'LeftClick',
+        1: 'MiddleClick',
+        2: 'RightClick',
+      };
+      if (event.button in zoomKeys) {
+        controller.operateByKey(zoomKeys[event.button]);
+      }
+      return;
+    }
+
     // 編集モード時は左クリックでドラッグ開始
     if (editModeController.isInEditMode() && event.button === 0) {
       event.preventDefault(); // 選択動作を抑制
@@ -611,6 +669,10 @@
         break;
       case 1:
         controller.operateByKey('MiddleClick');
+        // Pointer Lock はユーザー操作の中で要求する必要があるため、ここで開始する
+        if (zoomModeController.isActive()) {
+          requestZoomPointerLock();
+        }
         break;
       case 2:
         controller.operateByKey('RightClick');
@@ -632,6 +694,11 @@
   }
 
   function handleMouseMove(event: MouseEvent) {
+    if (zoomModeController.isActive()) {
+      zoomModeController.move(event.movementX, event.movementY);
+      return;
+    }
+
     if (!isDragging || !editModeController.isInEditMode()) return;
 
     const deltaX = event.clientX - dragStartX;
@@ -706,6 +773,13 @@
     document.addEventListener('mouseleave', () => {
       handleMouseleave();
     });
+    document.addEventListener('pointerlockchange', () => {
+      handlePointerLockChange();
+    });
+    document.addEventListener('pointerlockerror', () => {
+      console.warn('Pointer lock error');
+      controller.exitZoomMode();
+    });
     document.addEventListener('contextmenu', event => {
       event.preventDefault();
     });
@@ -758,6 +832,9 @@
              grid-template-rows: repeat({viewerController.getRows()}, 1fr);
              grid-template-columns: repeat({viewerController.getCols()}, 1fr);
              direction: {viewerController.isFlipped() ? 'rtl' : 'ltr'};
+             transform: {zoomModeController.isActive()
+        ? zoomModeController.getCanvasTransform()
+        : 'none'};
              "
     >
       {#each currentImages as img, i (i)}

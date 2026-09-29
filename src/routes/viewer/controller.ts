@@ -7,6 +7,7 @@ import { GotoDialogController } from './goto-dialog-controller.svelte';
 import { FilterDialogController } from './filter-dialog-controller.svelte';
 import { EditModeController } from './edit-mode-controller.svelte';
 import { HelpOverlayController } from './help-overlay-controller.svelte';
+import { ZoomModeController } from './zoom-mode-controller.svelte';
 
 export type Operation =
   | 'next'
@@ -38,9 +39,15 @@ export type Operation =
   | 'scaleUp'
   | 'scaleDown'
   | 'resetTransform'
+  | 'enterZoomMode'
+  | 'exitZoomMode'
+  | 'zoomIn'
+  | 'zoomOut'
+  | 'nextPage'
+  | 'prevPage'
   | 'showHelp';
 
-export type Mode = 'View' | 'Edit';
+export type Mode = 'View' | 'Edit' | 'Zoom';
 
 // 1枚表示時のジャンプ移動量。複数枚表示時は表示枚数分だけ移動する
 const SINGLE_VIEW_JUMP_STEP = 10;
@@ -69,6 +76,8 @@ const viewModeKeyConfigs: keyConfig[] = [
   { key: 'q', operation: 'randomJump', modifierKeys: [] },
   { key: 'RightClick', operation: 'randomJump', modifierKeys: [] },
   { key: 'MiddleClick', operation: 'bookmark', modifierKeys: [] },
+  // 左クリックは Shift 扱いのため、左+中クリックでも開始できる
+  { key: 'MiddleClick', operation: 'enterZoomMode', modifierKeys: ['shift'] },
   { key: 'b', operation: 'bookmark', modifierKeys: ['shift'] },
   { key: 'b', operation: 'gotoBookmark', modifierKeys: [] },
   { key: 'RightClick', operation: 'gotoBookmark', modifierKeys: ['shift'] },
@@ -107,9 +116,28 @@ const editModeKeyConfigs: keyConfig[] = [
   { key: '?', operation: 'showHelp', modifierKeys: ['shift'] },
 ];
 
+// ズームモードでは表示とぶつからない移動系の操作のみ有効にする
+const zoomModeKeyConfigs: keyConfig[] = [
+  { key: 'MiddleClick', operation: 'exitZoomMode', modifierKeys: [] },
+  { key: 'MiddleClick', operation: 'exitZoomMode', modifierKeys: ['shift'] },
+  { key: 'Escape', operation: 'exitZoomMode', modifierKeys: [] },
+  { key: 'WheelUp', operation: 'zoomIn', modifierKeys: [] },
+  { key: 'WheelDown', operation: 'zoomOut', modifierKeys: [] },
+  { key: 'LeftClick', operation: 'nextPage', modifierKeys: [] },
+  { key: 'ArrowRight', operation: 'nextPage', modifierKeys: [] },
+  { key: 'RightClick', operation: 'prevPage', modifierKeys: [] },
+  { key: 'ArrowLeft', operation: 'prevPage', modifierKeys: [] },
+  { key: 'q', operation: 'randomJump', modifierKeys: [] },
+  { key: 'b', operation: 'bookmark', modifierKeys: ['shift'] },
+  { key: 'b', operation: 'gotoBookmark', modifierKeys: [] },
+  { key: 'h', operation: 'prevHistory', modifierKeys: [] },
+  { key: 'h', operation: 'nextHistory', modifierKeys: ['shift'] },
+];
+
 const keyConfigsByMode: Record<Mode, keyConfig[]> = {
   View: viewModeKeyConfigs,
   Edit: editModeKeyConfigs,
+  Zoom: zoomModeKeyConfigs,
 };
 
 export function getKeyConfigs(mode: Mode): keyConfig[] {
@@ -131,16 +159,19 @@ export class Controler {
     private gotoDialogController: GotoDialogController,
     private filterDialogController: FilterDialogController,
     private editModeController: EditModeController,
-    private helpOverlayController: HelpOverlayController = new HelpOverlayController()
+    private helpOverlayController: HelpOverlayController = new HelpOverlayController(),
+    private zoomModeController: ZoomModeController = new ZoomModeController()
   ) {
-    this.keyToOperations.set('View', new Map<string, Operation>());
-    this.keyToOperations.set('Edit', new Map<string, Operation>());
-
-    this.readKeyConfigs('View', viewModeKeyConfigs);
-    this.readKeyConfigs('Edit', editModeKeyConfigs);
+    (Object.keys(keyConfigsByMode) as Mode[]).forEach(mode => {
+      this.keyToOperations.set(mode, new Map<string, Operation>());
+      this.readKeyConfigs(mode, keyConfigsByMode[mode]);
+    });
   }
 
   public getCurrentMode(): Mode {
+    if (this.zoomModeController.isActive()) {
+      return 'Zoom';
+    }
     return this.editModeController.isInEditMode() ? 'Edit' : 'View';
   }
 
@@ -219,6 +250,15 @@ export class Controler {
 
     console.log(`Controller operate: executing operation=${operation}`); // debug
 
+    const caretBefore = this.imageInfoManager.getCaret();
+    this.operateWithoutCheck(operation);
+    // ズームモード中のページ遷移ではキャンバスの拡縮・移動を元に戻す
+    if (this.zoomModeController.isActive() && this.imageInfoManager.getCaret() !== caretBefore) {
+      this.zoomModeController.resetTransform();
+    }
+  }
+
+  private operateWithoutCheck(operation: Operation): void {
     switch (operation) {
       case 'next':
         this.imageInfoManager.gotoNext();
@@ -353,10 +393,65 @@ export class Controler {
         this.toastController.showToast('変形をリセットしました');
         break;
       }
+      case 'enterZoomMode':
+        this.enterZoomMode();
+        break;
+      case 'exitZoomMode':
+        this.exitZoomMode();
+        break;
+      case 'zoomIn':
+        this.zoomModeController.zoomIn();
+        break;
+      case 'zoomOut':
+        this.zoomModeController.zoomOut();
+        break;
+      case 'nextPage': {
+        const group = this.zoomModeController.getGroup();
+        if (group) {
+          const length = this.imageInfoManager.getListLength();
+          this.imageInfoManager.gotoIndex(group.next(this.imageInfoManager.getCaret(), length));
+        }
+        break;
+      }
+      case 'prevPage': {
+        const group = this.zoomModeController.getGroup();
+        if (group) {
+          const length = this.imageInfoManager.getListLength();
+          this.imageInfoManager.gotoIndex(group.prev(this.imageInfoManager.getCaret(), length));
+        }
+        break;
+      }
       case 'showHelp':
         this.helpOverlayController.open();
         break;
     }
+  }
+
+  // --- ズームモード関連 --- //
+
+  private enterZoomMode(): void {
+    if (this.imageInfoManager.getListLength() === 0) {
+      return;
+    }
+    this.zoomModeController.enter(
+      this.imageInfoManager.getCaret(),
+      this.viewerController.getCells()
+    );
+    const group = this.zoomModeController.getGroup();
+    this.imageInfoManager.setCaretAligner(group ? index => group.align(index) : null);
+    this.toastController.showToast('ズームモードを開始しました');
+  }
+
+  /**
+   * ズームモードを終了する (Pointer Lock の解除時など、キー操作以外からも呼ばれる)
+   */
+  public exitZoomMode(): void {
+    if (!this.zoomModeController.isActive()) {
+      return;
+    }
+    this.zoomModeController.exit();
+    this.imageInfoManager.setCaretAligner(null);
+    this.toastController.showToast('ズームモードを終了しました');
   }
 
   private keyToString(key: string, modifierKeys: ModifierKey[] = this.getModfierKeys()): string {

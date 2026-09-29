@@ -45,7 +45,7 @@ describe('buildHelpSections', () => {
     expect(sections[0].items.map(item => item.description)).toEqual(['次の画像', '前の画像']);
   });
 
-  it.each(['View', 'Edit'] as const)('%s モードの全キー設定が一覧に含まれる', mode => {
+  it.each(['View', 'Edit', 'Zoom'] as const)('%s モードの全キー設定が一覧に含まれる', mode => {
     const configs = getKeyConfigs(mode);
     const sections = buildHelpSections(configs);
     const keyCount = sections.flatMap(section => section.items).flatMap(item => item.keys).length;
