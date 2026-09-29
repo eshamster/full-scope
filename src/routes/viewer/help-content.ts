@@ -7,6 +7,7 @@ export const HELP_CATEGORIES = [
   '表示レイアウト',
   '回転',
   '編集モード',
+  'ズームモード',
   'タグ・ファイル',
   'その他',
 ] as const;
@@ -41,6 +42,12 @@ const operationHelps: Record<Operation, { category: HelpCategory; description: s
   scaleUp: { category: '編集モード', description: '拡大' },
   scaleDown: { category: '編集モード', description: '縮小' },
   resetTransform: { category: '編集モード', description: '変形をリセット' },
+  enterZoomMode: { category: 'ズームモード', description: 'ズームモード開始' },
+  exitZoomMode: { category: 'ズームモード', description: 'ズームモード終了' },
+  zoomIn: { category: 'ズームモード', description: '拡大' },
+  zoomOut: { category: 'ズームモード', description: '縮小' },
+  nextPage: { category: 'ナビゲーション', description: '次のページ (表示枚数分)' },
+  prevPage: { category: 'ナビゲーション', description: '前のページ (表示枚数分)' },
   editTags: { category: 'タグ・ファイル', description: 'タグ編集' },
   filterByTag: { category: 'タグ・ファイル', description: 'タグで絞り込み' },
   delete: { category: 'タグ・ファイル', description: 'ゴミ箱へ移動' },
@@ -60,6 +67,7 @@ export type HelpSection = {
 const modeLabels: Record<Mode, string> = {
   View: '通常モード',
   Edit: '編集モード',
+  Zoom: 'ズームモード',
 };
 
 export function getModeLabel(mode: Mode): string {
@@ -73,6 +81,7 @@ const keyLabels: Record<string, string> = {
   ArrowDown: '↓',
   WheelUp: 'ホイール↑',
   WheelDown: 'ホイール↓',
+  LeftClick: '左クリック',
   RightClick: '右クリック',
   MiddleClick: '中クリック',
   Escape: 'Esc',
