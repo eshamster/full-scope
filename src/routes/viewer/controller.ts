@@ -6,6 +6,7 @@ import { ViewerController } from './viewer-controller.svelte';
 import { GotoDialogController } from './goto-dialog-controller.svelte';
 import { FilterDialogController } from './filter-dialog-controller.svelte';
 import { EditModeController } from './edit-mode-controller.svelte';
+import { HelpOverlayController } from './help-overlay-controller.svelte';
 
 export type Operation =
   | 'next'
@@ -36,7 +37,8 @@ export type Operation =
   | 'exitEditMode'
   | 'scaleUp'
   | 'scaleDown'
-  | 'resetTransform';
+  | 'resetTransform'
+  | 'showHelp';
 
 export type Mode = 'View' | 'Edit';
 
@@ -45,7 +47,7 @@ const SINGLE_VIEW_JUMP_STEP = 10;
 
 export type ModifierKey = 'ctrl' | 'shift' | 'alt';
 
-type keyConfig = {
+export type keyConfig = {
   key: string;
   operation: Operation;
   modifierKeys: ModifierKey[];
@@ -89,6 +91,7 @@ const viewModeKeyConfigs: keyConfig[] = [
   { key: 'f', operation: 'rotateLocalRight', modifierKeys: ['ctrl', 'shift'] },
   { key: 'ArrowLeft', operation: 'rotateLocalLeft', modifierKeys: ['ctrl'] },
   { key: 'b', operation: 'rotateLocalLeft', modifierKeys: ['ctrl', 'shift'] },
+  { key: '?', operation: 'showHelp', modifierKeys: ['shift'] },
 ];
 
 const editModeKeyConfigs: keyConfig[] = [
@@ -101,7 +104,17 @@ const editModeKeyConfigs: keyConfig[] = [
   { key: 'ArrowLeft', operation: 'rotateLocalLeft', modifierKeys: ['ctrl'] },
   { key: 'f', operation: 'rotateLocalRight', modifierKeys: ['ctrl', 'shift'] },
   { key: 'b', operation: 'rotateLocalLeft', modifierKeys: ['ctrl', 'shift'] },
+  { key: '?', operation: 'showHelp', modifierKeys: ['shift'] },
 ];
+
+const keyConfigsByMode: Record<Mode, keyConfig[]> = {
+  View: viewModeKeyConfigs,
+  Edit: editModeKeyConfigs,
+};
+
+export function getKeyConfigs(mode: Mode): keyConfig[] {
+  return keyConfigsByMode[mode];
+}
 
 export class Controler {
   private keyToOperations = new Map<Mode, Map<string, Operation>>();
@@ -117,13 +130,18 @@ export class Controler {
     private viewerController: ViewerController,
     private gotoDialogController: GotoDialogController,
     private filterDialogController: FilterDialogController,
-    private editModeController: EditModeController
+    private editModeController: EditModeController,
+    private helpOverlayController: HelpOverlayController = new HelpOverlayController()
   ) {
     this.keyToOperations.set('View', new Map<string, Operation>());
     this.keyToOperations.set('Edit', new Map<string, Operation>());
 
     this.readKeyConfigs('View', viewModeKeyConfigs);
     this.readKeyConfigs('Edit', editModeKeyConfigs);
+  }
+
+  public getCurrentMode(): Mode {
+    return this.editModeController.isInEditMode() ? 'Edit' : 'View';
   }
 
   public setOnEditTags(callback: () => void): void {
@@ -154,8 +172,16 @@ export class Controler {
       return;
     }
 
+    // コマンド一覧の表示中はホイール以外の入力で閉じ、その入力の操作は実行しない
+    if (this.helpOverlayController.isShow()) {
+      if (!['WheelUp', 'WheelDown'].includes(rawKey)) {
+        this.helpOverlayController.close();
+      }
+      return;
+    }
+
     const key = this.keyToString(rawKey);
-    const currentMode: Mode = this.editModeController.isInEditMode() ? 'Edit' : 'View';
+    const currentMode = this.getCurrentMode();
     const modeMap = this.keyToOperations.get(currentMode);
 
     if (!modeMap) {
@@ -184,7 +210,8 @@ export class Controler {
       this.dialogController.isShow() ||
       this.isTagEditorOpen ||
       this.gotoDialogController.isShow() ||
-      this.filterDialogController.isShow()
+      this.filterDialogController.isShow() ||
+      this.helpOverlayController.isShow()
     ) {
       console.log(`Controller operate: blocking operation=${operation} due to dialog open`); // debug
       return;
@@ -326,6 +353,9 @@ export class Controler {
         this.toastController.showToast('変形をリセットしました');
         break;
       }
+      case 'showHelp':
+        this.helpOverlayController.open();
+        break;
     }
   }
 

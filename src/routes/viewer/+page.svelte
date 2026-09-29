@@ -178,7 +178,7 @@
   import { ViewerController } from '@/routes/viewer/viewer-controller.svelte';
   import { GotoDialogController } from '@/routes/viewer/goto-dialog-controller.svelte';
   import { FilterDialogController } from '@/routes/viewer/filter-dialog-controller.svelte';
-  import { Controler } from '@/routes/viewer/controller';
+  import { Controler, getKeyConfigs } from '@/routes/viewer/controller';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import GotoDialog from './GotoDialog.svelte';
   import FilterByTagDialog from './FilterByTagDialog.svelte';
@@ -187,6 +187,9 @@
   import { TagController } from './tag-controller.svelte';
   import { EditModeController } from './edit-mode-controller.svelte';
   import ImageInfoDisplay from './image-info-display.svelte';
+  import HelpOverlay from './HelpOverlay.svelte';
+  import { HelpOverlayController } from './help-overlay-controller.svelte';
+  import { buildHelpSections, getModeLabel } from './help-content';
 
   getCurrentWindow().setFullscreen(true);
 
@@ -204,6 +207,7 @@
   const viewerController = new ViewerController();
   const tagController = new TagController(toastController);
   const editModeController = new EditModeController();
+  const helpOverlayController = new HelpOverlayController();
   const controller = new Controler(
     manager,
     dialogController,
@@ -212,8 +216,12 @@
     viewerController,
     gotoDialogController,
     filterDialogController,
-    editModeController
+    editModeController,
+    helpOverlayController
   );
+
+  // コマンド一覧は現在のモードのキー設定から組み立てる
+  let helpSections = $derived(buildHelpSections(getKeyConfigs(controller.getCurrentMode())));
 
   // ImageInfoManagerにTagControllerを設定
   manager.setTagController(tagController);
@@ -468,6 +476,7 @@
     dialogController.isShow() ||
       gotoDialogController.isShow() ||
       filterDialogController.isShow() ||
+      helpOverlayController.isShow() ||
       showTagEditor
   );
 
@@ -526,9 +535,9 @@
     ); // デバッグログ
 
     if (event.key === 'Escape') {
-      // 編集モード中はControllerに処理を委譲、通常モードではウィンドウを閉じる
-      if (editModeController.isInEditMode()) {
-        // 編集モード終了処理はController側で行う
+      // 編集モード中・コマンド一覧表示中はControllerに処理を委譲、それ以外ではウィンドウを閉じる
+      if (editModeController.isInEditMode() || helpOverlayController.isShow()) {
+        // 編集モード終了・コマンド一覧を閉じる処理はController側で行う
       } else {
         getCurrentWindow().close();
         return; // 以降の処理をスキップ
@@ -553,6 +562,11 @@
         return;
     }
 
+    // `?` の押しっぱなしによるキーリピートでコマンド一覧が即座に閉じないようにする
+    if (event.repeat && helpOverlayController.isShow()) {
+      return;
+    }
+
     controller.operateByKey(event.key);
   }
   function handleKeyup(event: KeyboardEvent) {
@@ -570,6 +584,13 @@
   }
 
   function handleMouseDown(event: MouseEvent) {
+    // コマンド一覧の表示中はどのボタンのクリックでも閉じ、クリックの操作は実行しない
+    if (helpOverlayController.isShow()) {
+      event.preventDefault();
+      helpOverlayController.close();
+      return;
+    }
+
     // 編集モード時は左クリックでドラッグ開始
     if (editModeController.isInEditMode() && event.button === 0) {
       event.preventDefault(); // 選択動作を抑制
@@ -782,4 +803,10 @@
     imageInfo={manager.getListLength() > 0 ? manager.getCurrent() : null}
     {globalRotation}
   ></ImageInfoDisplay>
+
+  <HelpOverlay
+    show={helpOverlayController.isShow()}
+    title={getModeLabel(controller.getCurrentMode())}
+    sections={helpSections}
+  ></HelpOverlay>
 </main>
